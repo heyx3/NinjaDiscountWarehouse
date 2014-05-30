@@ -213,3 +213,15 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+
+
+############
+## Unity
+############
+
+Library/ScriptAssemblies/
+Library/ShaderCache/
+Library/SHaderCache.db
+Library/metadata/
+Temp/
