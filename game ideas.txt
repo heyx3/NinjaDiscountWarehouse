@@ -1,0 +1,9 @@
+Level layout:
+	Spread-out piles of stuff blocking the player's view
+	Different conveyor belts coming out of the walls pushing out debris for the player to throw
+		Debris has randomized size/mass
+		Limit on max debris in a pile so the physics doesn't lag out
+
+Throw mechanics:
+	Player can throw debris OR ninjas
+	
