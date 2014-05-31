@@ -10,7 +10,7 @@ public class DebugLevitator : MonoBehaviour
 	public bool PressThisToLevitate = false;
 	public bool PressThisToThrow = false;
 
-	public Vector3 ThrowDir = new Vector3(1.0f, 1.0f, 0.0f).normalized;
+	public Vector3 ThrowDir = new Vector3(1.0f, 0.0f, 1.0f).normalized;
 
 
 	private Levitatable levitator;
