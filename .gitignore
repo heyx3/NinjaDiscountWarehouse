@@ -224,6 +224,8 @@ Library/ShaderCache.db
 Library/asset*
 Library/Asset*
 Library/metadata/
+Library/InspectorExpandedItems.asset
+Library/guidmapper
 Temp/
 Assembly-*
 Assets/Models/Props/Materials/

@@ -11,6 +11,8 @@ public class HumanBehavior : MonoBehaviour
 
 
 	public float NodYVelocity = -10.0f;
+	//public float JerkHorizontalVelocity
+
 	public float KinematicsTrackerDuration = 0.05f;
 	public float DisableGesturesDuration = 0.25f;
 	public int MaxLevitations = 8;
@@ -75,7 +77,6 @@ public class HumanBehavior : MonoBehaviour
 		MyTransform = transform;
 		Levitators = new List<Levitatable>();
 	}
-
 
 	void Update()
 	{
