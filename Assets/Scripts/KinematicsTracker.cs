@@ -132,6 +132,8 @@ public class KinematicsTracker : MonoBehaviour
 	/// </summary>
 	public float GetAverageDeltaTime(float duration)
 	{
+		return GetAverageDeltaTime(duration, 0.0f);
+		/*
 		int start = GetLogIndex(0);
 
 		if (DeltaTimeLogs[start] == -1.0f) return 0.00001f;
@@ -146,6 +148,28 @@ public class KinematicsTracker : MonoBehaviour
 		for (int logCount = 0; logCount < logs; ++logCount)
 			sum += DeltaTimeLogs[WrapNegative(start - logCount)];
 		return sum / (float)logs;
+		*/
+	}
+	/// <summary>
+	/// Gets the average delta time value over the given time duration.
+	/// </summary>
+	public float GetAverageDeltaTime(float startDuration, float endDuration)
+	{
+		int start = GetLogIndex(startDuration),
+			end = GetLogIndex(endDuration);
+
+		float sum = 0.0f;
+		int count = 0;
+		int index = start - 1;
+		do
+		{
+			index = (index + 1) % LogBufferSize;
+			count += 1;
+			sum += DeltaTimeLogs[index];
+		}
+		while (index != end);
+
+		return sum / count;
 	}
 
 	public struct RotationValue { public Vector3 Forward, Right; }
@@ -175,13 +199,34 @@ public class KinematicsTracker : MonoBehaviour
 		return val;
 	}
 
+	public Vector3 GetAverage(float startPastTime, float endPastTime, Vector3[] logBuffer)
+	{
+		int start = GetLogIndex(startPastTime);
+		int end = GetLogIndex(endPastTime);
+
+		Vector3 sum = Vector3.zero;
+		int count = 0;
+		int index = start - 1;
+		do
+		{
+			index = (index + 1) % LogBufferSize;
+			count += 1;
+			sum += logBuffer[index];
+		}
+		while (index != end);
+
+		return sum / count;
+	}
 	/// <summary>
 	/// Gets the average of the given buffer over the given number of seconds.
 	/// </summary>
 	public Vector3 GetAverage(float duration, Vector3[] logBuffer)
 	{
+		return GetAverage(duration, 0.0f, logBuffer);
+
 		//Get the number of logs for this duration.
-		duration = ClampDuration(duration);
+		/*
+		 * duration = ClampDuration(duration);
 		int logs = GetNumbLogs(duration);
 		if (logs == 0) return logBuffer[GetLogIndex(0)];
 
@@ -192,9 +237,13 @@ public class KinematicsTracker : MonoBehaviour
 		for (int logCount = 0; logCount < logs; ++logCount)
 			sum += logBuffer[WrapNegative(start - logCount)];
 		return sum / (float)logs;
+		 */
 	}
+
 	public Vector3 GetAverageVelocity(float duration) { return GetAverage(duration, VelocityLogs); }
+	public Vector3 GetAverageVelocity(float startDuration, float endDuration) { return GetAverage(startDuration, endDuration, VelocityLogs); }
 	public Vector3 GetAverageAcceleration(float duration) { return GetAverage(duration, AccelerationLogs); }
+	public Vector3 GetAverageAcceleration(float startDuration, float endDuration) { return GetAverage(startDuration, endDuration, AccelerationLogs); }
 
 	/// <summary>
 	/// Gets the net change in position during the given period.
