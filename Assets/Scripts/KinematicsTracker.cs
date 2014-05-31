@@ -36,6 +36,17 @@ public class KinematicsTracker : MonoBehaviour
 	public KinematicTypes TypeToTrack = KinematicTypes.Translation;
 
 
+	[System.Serializable]
+	public class DebugData
+	{
+		public Vector2 GUIPosOffset = Vector2.zero;
+		public bool LogAverageVel = false;
+		public bool LogAverageAccel = false;
+		public float Duration = 1.0f;
+	}
+	public DebugData Debugging = new DebugData();
+
+
 	/// <summary>
 	/// The next spot in the log buffer to be written to.
 	/// </summary>
@@ -44,6 +55,14 @@ public class KinematicsTracker : MonoBehaviour
 	/// The recorded delta time for each log entry.
 	/// </summary>
 	public float[] DeltaTimeLogs { get; private set; }
+	/// <summary>
+	/// The recorded forward vectors for each log entry.
+	/// </summary>
+	public Vector3[] ForwardLogs { get; private set; }
+	/// <summary>
+	/// The recorded right vectors for each log entry.
+	/// </summary>
+	public Vector3[] RightLogs { get; private set; }
 	/// <summary>
 	/// The most recently-recorded positions. NOT in simple chronological order.
 	/// </summary>
@@ -125,6 +144,33 @@ public class KinematicsTracker : MonoBehaviour
 		return sum / (float)logs;
 	}
 
+	public struct RotationValue { public Vector3 Forward, Right; }
+	/// <summary>
+	/// Gets the forward vector of this object at the specified number of seconds in the past.
+	/// </summary>
+	public RotationValue GetForwardVectorAtTime(float timeAgo)
+	{
+		timeAgo = ClampDuration(timeAgo);
+		RotationValue val = new RotationValue();
+
+		float counter = 0.0f;
+		for (int i = 0; i < LogBufferSize; ++i)
+		{
+			if (counter >= timeAgo)
+			{
+				int index = GetLogIndex(i);
+				val.Forward = ForwardLogs[index];
+				val.Right = RightLogs[index];
+				return val;
+			}
+			counter += DeltaTimeLogs[GetLogIndex(i)];
+		}
+
+		val.Forward = ForwardLogs[GetLogIndex(LogBufferSize - 1)];
+		val.Right = RightLogs[GetLogIndex(LogBufferSize - 1)];
+		return val;
+	}
+
 	/// <summary>
 	/// Gets the average of the given buffer over the given number of seconds.
 	/// </summary>
@@ -185,6 +231,8 @@ public class KinematicsTracker : MonoBehaviour
 
 		LogCounter = 0;
 
+		ForwardLogs = new Vector3[LogBufferSize];
+		RightLogs = new Vector3[LogBufferSize];
 		PositionLogs = new Vector3[LogBufferSize];
 		VelocityLogs = new Vector3[LogBufferSize];
 		AccelerationLogs = new Vector3[LogBufferSize];
@@ -193,6 +241,8 @@ public class KinematicsTracker : MonoBehaviour
 
 		for (int i = 0; i < LogBufferSize; ++i)
 		{
+			ForwardLogs[i] = Vector3.forward;
+			RightLogs[i] = Vector3.right;
 			PositionLogs[i] = Vector3.zero;
 			VelocityLogs[i] = Vector3.zero;
 			AccelerationLogs[i] = Vector3.zero;
@@ -210,6 +260,8 @@ public class KinematicsTracker : MonoBehaviour
 		MaxLogDuration += Time.deltaTime;
 
 		DeltaTimeLogs[LogCounter] = Time.deltaTime;
+		ForwardLogs[LogCounter] = MyTransform.forward;
+		RightLogs[LogCounter] = MyTransform.right;
 
 		switch (TypeToTrack)
 		{
@@ -232,7 +284,22 @@ public class KinematicsTracker : MonoBehaviour
 
 	void OnGUI()
 	{
-		GUI.Label(new Rect(0.0f, 0.0f, Screen.width, Screen.height),
-				  "Vel: " + GetAverageVelocity(1.0f) + "; Accel: " + GetAverageAcceleration(1.0f) + "DeltaT: " + GetAverageDeltaTime(1.0f) + "; Duration: " + ClampDuration(1.0f).ToString());
+		System.Text.StringBuilder strng = new System.Text.StringBuilder();
+
+		if (Debugging.LogAverageVel)
+		{
+			strng.Append("Velocity: ");
+			strng.Append(GetAverageVelocity(Debugging.Duration).ToString());
+			strng.AppendLine();
+		}
+		if (Debugging.LogAverageAccel)
+		{
+			strng.Append("Acceleration: ");
+			strng.Append(GetAverageAcceleration(Debugging.Duration).ToString());
+			strng.AppendLine();
+		}
+
+		GUI.Label(new Rect(Debugging.GUIPosOffset.x, Debugging.GUIPosOffset.y, Screen.width - Debugging.GUIPosOffset.x, Screen.height - Debugging.GUIPosOffset.y),
+				  strng.ToString());
 	}
 }
