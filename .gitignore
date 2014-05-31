@@ -46,7 +46,6 @@ local.properties
 [Dd]ebug/
 [Rr]elease/
 x64/
-build/
 [Bb]in/
 [Oo]bj/
 
@@ -193,7 +192,6 @@ $RECYCLE.BIN/
 *.egg
 *.egg-info
 dist/
-build/
 eggs/
 parts/
 var/
@@ -226,3 +224,6 @@ Library/SHaderCache.db
 Library/metadata/
 Temp/
 Assembly-*
+Assets/Models/Props/Materials/
+Assets/Models/Materials/
+Assets/Models/Props/Barrels/Materials/
