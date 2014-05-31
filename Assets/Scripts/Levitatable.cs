@@ -28,6 +28,7 @@ public class Levitatable : MonoBehaviour
 	public class LevitatedData
 	{
 		public Vector3 InitialRotImpulseVariance = new Vector3(100.0f, 100.0f, 100.0f);
+		[System.NonSerialized] public Vector3 TargetDir = Vector3.forward;
 
 		[System.Serializable]
 		public class SubData
@@ -38,12 +39,11 @@ public class Levitatable : MonoBehaviour
 		}
 		public SubData HorizontalMovement, VerticalMovement;
 
-		public Vector3 GetTargetPosition(Vector3 playerPos, Vector3 thisPos)
+		public Vector3 GetTargetPosition(Vector3 playerPos)
 		{
-			Vector3 toMe = thisPos - playerPos;
 			return playerPos +
-				   (HorizontalMaskNorm(toMe) * HorizontalMovement.TargetDistanceFromPlayer) +
-				   (VerticalMaskNorm(toMe) * VerticalMovement.TargetDistanceFromPlayer);
+				   (HorizontalMaskNorm(TargetDir) * HorizontalMovement.TargetDistanceFromPlayer) +
+				   (VerticalMaskNorm(TargetDir) * VerticalMovement.TargetDistanceFromPlayer);
 		}
 	}
 	public LevitatedData Levitating = new LevitatedData();
@@ -87,7 +87,7 @@ public class Levitatable : MonoBehaviour
 
 				Vector3 playerPos = Human.MyTransform.position,
 						towardsPlayer = playerPos - MyRigid.position;
-				Vector3 targetPos = Levitating.GetTargetPosition(playerPos, MyRigid.position),
+				Vector3 targetPos = Levitating.GetTargetPosition(playerPos),
 					    towardsTarget = targetPos - MyRigid.position;
 				Vector3 playerToTarget = playerPos - targetPos;
 
@@ -122,11 +122,12 @@ public class Levitatable : MonoBehaviour
 				{
 					State = States.Inert;
 					Throwing.TimeTillInert = -1.0f;
-					break;
 				}
-
-				//Apply the throw force.
-				MyRigid.AddForce(Throwing.Acceleration * Throwing.Direction, ForceMode.Acceleration);
+				else
+				{
+					//Apply the throw force.
+					MyRigid.AddForce(Throwing.Acceleration * Throwing.Direction, ForceMode.Acceleration);
+				}
 
 				break;
 
@@ -142,6 +143,7 @@ public class Levitatable : MonoBehaviour
 	public void Levitate()
 	{
 		State = States.Levitated;
+		Levitating.TargetDir = (MyRigid.position - Human.MyTransform.position).normalized;
 		MyRigid.AddTorque(new Vector3(Levitating.InitialRotImpulseVariance.x * (-1.0f + (2.0f * Random.value)),
 									  Levitating.InitialRotImpulseVariance.y * (-1.0f + (2.0f * Random.value)),
 									  Levitating.InitialRotImpulseVariance.z * (-1.0f + (2.0f * Random.value))),
