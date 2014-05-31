@@ -60,6 +60,7 @@ public class Levitatable : MonoBehaviour
 	public ThrownData Throwing = new ThrownData();
 
 	public float GravityAcceleration = 9.8f;
+	public Renderer ThrowableMeshRenderer = null;
 
 
 	public Rigidbody MyRigid { get; private set; }
@@ -70,6 +71,9 @@ public class Levitatable : MonoBehaviour
 		MyRigid = rigidbody;
 		MyRigid.useGravity = false;
 		State = States.Inert;
+
+		if (ThrowableMeshRenderer != null)
+			ThrowableMeshRenderer.enabled = false;
 	}
 
 	void FixedUpdate()
@@ -148,6 +152,12 @@ public class Levitatable : MonoBehaviour
 									  Levitating.InitialRotImpulseVariance.y * (-1.0f + (2.0f * Random.value)),
 									  Levitating.InitialRotImpulseVariance.z * (-1.0f + (2.0f * Random.value))),
 						  ForceMode.Impulse);
+
+		if (ThrowableMeshRenderer != null)
+		{
+			ThrowableMeshRenderer.enabled = true;
+			ThrowableMeshRenderer.material = ThrowableMaterialController.Instance.ThrowableMat;
+		}
 	}
 	/// <summary>
 	/// Changes state to throwing.
@@ -157,5 +167,10 @@ public class Levitatable : MonoBehaviour
 		State = States.Thrown;
 		Throwing.TimeTillInert = Throwing.AccelerationDuration;
 		Throwing.Direction = dir;
+
+		if (ThrowableMeshRenderer != null)
+		{
+			ThrowableMeshRenderer.enabled = false;
+		}
 	}
 }

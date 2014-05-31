@@ -8,10 +8,11 @@ using UnityEngine;
 public class HumanBehavior : MonoBehaviour
 {
 	public static HumanBehavior Instance { get; private set; }
+	private static Vector3 HorizontalMask(Vector3 inV) { return new Vector3(inV.x, 0.0f, inV.z); }
 
 
-	public float NodYVelocity = -10.0f;
-	//public float JerkHorizontalVelocity
+	public float NodYVelocity = -3.5f;
+	public float JerkHorizontalSpeed = 8.0f;
 
 	public float KinematicsTrackerDuration = 0.05f;
 	public float DisableGesturesDuration = 0.25f;
@@ -19,7 +20,8 @@ public class HumanBehavior : MonoBehaviour
 
 	private float timeSinceLastGesture = 9999.0f;
 
-	public KinematicsTracker HeadTracking = null;
+	public KinematicsTracker HeadTracker = null,
+							 FaceTracker = null;
 	public Transform CameraTracker = null;
 	
 
@@ -67,10 +69,13 @@ public class HumanBehavior : MonoBehaviour
 		if (Instance != null)
 			throw new UnityException("More than one instance of 'HumanBehavior'!");
 		Instance = this;
-
-		if (HeadTracking == null)
-			throw new UnityException("'HeadTracking' property is null!");
-
+		
+		if (HeadTracker == null)
+			throw new UnityException("'HeadTracker' property is null!");
+		
+		if (FaceTracker == null)
+			throw new UnityException("'FaceTracker' property is null!");
+		
 		if (CameraTracker == null)
 			throw new UnityException("'CameraTracker' property is null!");
 
@@ -82,25 +87,27 @@ public class HumanBehavior : MonoBehaviour
 	{
 		timeSinceLastGesture += Time.deltaTime;
 
-		if (IsLevitating)
+		if (timeSinceLastGesture > DisableGesturesDuration)
 		{
-			if (Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))
-			{
-				foreach (Levitatable lev in Levitators)
-					lev.Throw(new Vector3(1.0f, 0.0f, 1.0f).normalized);
-				Levitators.Clear();
-			}
-		}
-		else
-		{
-			if (timeSinceLastGesture > DisableGesturesDuration && HeadTracking.GetAverageVelocity(KinematicsTrackerDuration).y < NodYVelocity)
+			if (HeadTracker.GetAverageVelocity(KinematicsTrackerDuration).y < NodYVelocity)
 			{
 				timeSinceLastGesture = 0.0f;
 
-				Vector3 forward = HeadTracking.GetForwardVectorAtTime(KinematicsTrackerDuration).Forward;
-				Levitators = FindLevitators(forward);
-				foreach (Levitatable levs in Levitators)
-					levs.Levitate();
+				Vector3 forward = HeadTracker.GetForwardVectorAtTime(KinematicsTrackerDuration).Forward;
+				foreach (Levitatable lev in FindLevitators(forward))
+					if (!Levitators.Contains(lev))
+					{
+						Levitators.Add(lev);
+						lev.Levitate();
+					}
+			}
+			else if (HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) ||
+					Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))
+			{
+				Vector3 dir = HeadTracker.GetAverageVelocity(KinematicsTrackerDuration).normalized;
+				foreach (Levitatable lev in Levitators)
+					lev.Throw(dir.normalized);
+				Levitators.Clear();
 			}
 		}
 	}

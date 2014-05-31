@@ -9,6 +9,7 @@ public class GameDirector : MonoBehaviour
 {
 	public static GameDirector Instance { get; private set; }
 
+
 	public GameObject LinePrefab = null;
 	public Transform CreateLine(Vector3 start, Vector3 dir)
 	{
