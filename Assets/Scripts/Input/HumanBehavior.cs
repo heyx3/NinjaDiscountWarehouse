@@ -13,6 +13,7 @@ public class HumanBehavior : MonoBehaviour
 	public float NodYVelocity = -10.0f;
 	public float KinematicsTrackerDuration = 0.05f;
 	public float DisableGesturesDuration = 0.25f;
+	public int MaxLevitations = 8;
 
 	private float timeSinceLastGesture = 9999.0f;
 
@@ -43,15 +44,17 @@ public class HumanBehavior : MonoBehaviour
 		float dist = wallCast.distance + 5.0f;
 		layer = (1 << LayerMask.NameToLayer("Throwable"));
 		RaycastHit[] hits = Physics.RaycastAll(CameraTracker.position, dir, dist, layer);
-		GameDirector.Instance.CreateLine(CameraTracker.position, dir);
+		//GameDirector.Instance.CreateLine(CameraTracker.position, dir);
 
 		//Add each hit object to the list.
-		foreach (RaycastHit hit in hits)
+		for (int i = 0; i < hits.Length && ret.Count < MaxLevitations; ++i)
 		{
-			Levitatable levComponent = hit.transform.GetComponent<Levitatable>();
-			if (levComponent == null) throw new UnityException("Object uses 'Throwable' layer but doesn't have a Levitatable component! Name: " + hit.transform.gameObject.name);
+			Levitatable levComponent = hits[i].transform.GetComponent<Levitatable>();
+			if (levComponent == null)
+				throw new UnityException("Object uses 'Throwable' layer but doesn't have a Levitatable component! Name: " + hits[i].transform.gameObject.name);
 			ret.Add(levComponent);
 		}
+
 
 		return ret;
 	}
@@ -80,7 +83,12 @@ public class HumanBehavior : MonoBehaviour
 
 		if (IsLevitating)
 		{
-
+			if (Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))
+			{
+				foreach (Levitatable lev in Levitators)
+					lev.Throw(new Vector3(1.0f, 0.0f, 1.0f).normalized);
+				Levitators.Clear();
+			}
 		}
 		else
 		{
