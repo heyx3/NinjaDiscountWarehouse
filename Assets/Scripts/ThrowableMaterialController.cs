@@ -8,6 +8,7 @@ public class ThrowableMaterialController : MonoBehaviour
 
 	public Color Color1 = new Color(1.0f, 1.0f, 1.0f, 0.25f),
 				 Color2 = new Color(0.0f, 0.0f, 0.0f, 0.01f);
+	public float TimeSpeedScale = 1.0f;
 
 	public Material ThrowableMat = null;
 
@@ -23,7 +24,8 @@ public class ThrowableMaterialController : MonoBehaviour
 	{
 		if (ThrowableMat != null)
 		{
-			float oscillate_0_1 = 0.5f + (0.5f * Mathf.Sin(Time.time));
+			float oscillate_0_1 = 0.5f + (0.5f * Mathf.Sin(Time.time * TimeSpeedScale));
+			oscillate_0_1 = Mathf.SmoothStep(0.0f, 1.0f, oscillate_0_1);
 			ThrowableMat.color = new Color(Mathf.Lerp(Color1.r, Color2.r, oscillate_0_1),
 										   Mathf.Lerp(Color1.g, Color2.g, oscillate_0_1),
 										   Mathf.Lerp(Color1.b, Color2.b, oscillate_0_1),

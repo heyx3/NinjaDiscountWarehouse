@@ -96,6 +96,10 @@ public class KinematicsTracker : MonoBehaviour
 		return WrapNegative(LogCounter - 1 - descendingChronological) % LogBufferSize;
 	}
 	/// <summary>
+	/// Gets the log entry for the given time (relative to the present, positive direction pointing backwards in time).
+	/// </summary>
+	public int GetLogIndex(float duration) { return GetLogIndex(GetNumbLogs(duration)); }
+	/// <summary>
 	/// Clamps the given time duration between 0 and the length of the log buffer's sampling so far (i.e. the total interval of time that the logs represent).
 	/// </summary>
 	public float ClampDuration(float duration)

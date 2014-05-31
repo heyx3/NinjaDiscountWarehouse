@@ -28,7 +28,7 @@ public class Levitatable : MonoBehaviour
 	public class LevitatedData
 	{
 		public Vector3 InitialRotImpulseVariance = new Vector3(100.0f, 100.0f, 100.0f);
-		[System.NonSerialized] public Vector3 TargetDir = Vector3.forward;
+		[System.NonSerialized] public Vector2 TargetDir = Vector2.right;
 
 		[System.Serializable]
 		public class SubData
@@ -42,8 +42,8 @@ public class Levitatable : MonoBehaviour
 		public Vector3 GetTargetPosition(Vector3 playerPos)
 		{
 			return playerPos +
-				   (HorizontalMaskNorm(TargetDir) * HorizontalMovement.TargetDistanceFromPlayer) +
-				   (VerticalMaskNorm(TargetDir) * VerticalMovement.TargetDistanceFromPlayer);
+				   (new Vector3(TargetDir.x, 0.0f, TargetDir.y) * HorizontalMovement.TargetDistanceFromPlayer) +
+				   new Vector3(0.0f, VerticalMovement.TargetDistanceFromPlayer, 0.0f);
 		}
 	}
 	public LevitatedData Levitating = new LevitatedData();
@@ -147,7 +147,8 @@ public class Levitatable : MonoBehaviour
 	public void Levitate()
 	{
 		State = States.Levitated;
-		Levitating.TargetDir = (MyRigid.position - Human.MyTransform.position).normalized;
+		Vector3 playerToMe = (MyRigid.position - Human.MyTransform.position).normalized;
+		Levitating.TargetDir = new Vector2(playerToMe.x, playerToMe.z);
 		MyRigid.AddTorque(new Vector3(Levitating.InitialRotImpulseVariance.x * (-1.0f + (2.0f * Random.value)),
 									  Levitating.InitialRotImpulseVariance.y * (-1.0f + (2.0f * Random.value)),
 									  Levitating.InitialRotImpulseVariance.z * (-1.0f + (2.0f * Random.value))),

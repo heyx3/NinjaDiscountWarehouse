@@ -226,6 +226,10 @@ Library/Asset*
 Library/metadata/
 Library/InspectorExpandedItems.asset
 Library/guidmapper
+Library/MonoManager.asset
+Library/ScriptMapper
+Library/AnnotationManager
+Library/CurrentLayout.dwlt
 Temp/
 Assembly-*
 Assets/Models/Props/Materials/
