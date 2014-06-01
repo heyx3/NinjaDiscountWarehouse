@@ -45,21 +45,25 @@ public class PathFollower : MonoBehaviour
             {
                 //First, get the next target node.
                 Current = Current.GetNextNode(MovingBackwards);
-                if (Current.GetNextNode(MovingBackwards) == null)
+				bool hitEnd = Current.GetNextNode(MovingBackwards) == null;
+                if (hitEnd)
                 {
                     MovingBackwards = !MovingBackwards;
                     if (OnPathEnd != null) OnPathEnd(this, new System.EventArgs());
                 }
 
                 //Since this cube just snapped to a new node, there may be a bit of movement left.
-                float extraMovement = (moveDist / Current.SpeedModifier) -
-                                      Vector3.Distance(MyTransform.position, newPos);
-                if (extraMovement > 0.0f)
-                {
-                    Vector3 newNewPos;
-                    Current.MoveTowardsNext(newPos, extraMovement, MovingBackwards, out newNewPos);
-                    MyTransform.position = newNewPos;
-                }
+				if (!hitEnd)
+				{
+					float extraMovement = (moveDist / Current.SpeedModifier) -
+										  Vector3.Distance(MyTransform.position, newPos);
+					if (extraMovement > 0.0f)
+					{
+						Vector3 newNewPos;
+						Current.MoveTowardsNext(newPos, extraMovement, MovingBackwards, out newNewPos);
+						MyTransform.position = newNewPos;
+					}
+				}
             }
             else
             {

@@ -58,8 +58,8 @@ public class PathNode : MonoBehaviour
     /// <param name="moveBackwards">Whether or not to move backwards through the path.</param>
     public PathNode GetPathEnd(bool moveBackwards)
     {
-        return (moveBackwards ? (Previous == null ? this : Next.GetPathEnd(true)) :
-                                (Next == null ? this : Previous.GetPathEnd(false)));
+        return (moveBackwards ? (Previous == null ? this : Previous.GetPathEnd(true)) :
+                                (Next == null ? this : Next.GetPathEnd(false)));
     }
     /// <summary>
     /// Gets the first node in this path.
@@ -67,8 +67,8 @@ public class PathNode : MonoBehaviour
     /// <param name="moveBackwards">Whether or not to move backwards through the path.</param>
     public PathNode GetPathStart(bool moveBackwards)
     {
-        return (moveBackwards ? (Next == null ? this : Previous.GetPathStart(true)) :
-                                (Previous == null ? this : Next.GetPathStart(false)));
+        return (moveBackwards ? (Next == null ? this : Next.GetPathStart(true)) :
+                                (Previous == null ? this : Previous.GetPathStart(false)));
     }
 
 
