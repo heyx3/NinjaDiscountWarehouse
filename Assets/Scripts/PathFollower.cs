@@ -19,6 +19,10 @@ public class PathFollower : MonoBehaviour
     /// performance penalty that the "transform" property incurs.
     /// </summary>
     public Transform MyTransform { get; private set; }
+	/// <summary>
+	/// The current velocity from this component's pathing behavior.
+	/// </summary>
+	public Vector3 Velocity { get; private set; }
 
     /// <summary>
     /// Raised if this follower hits the end of its path and changes direction.
@@ -30,12 +34,17 @@ public class PathFollower : MonoBehaviour
     {
         MyTransform = transform;
 
+		Velocity = Vector3.zero;
+
         if (Current != null)
             MyTransform.position = Current.transform.position;
     }
 
     void FixedUpdate()
     {
+		Vector3 oldPos = MyTransform.position;
+
+
         if (Current != null && (Current.Next != null || Current.Previous != null))
         {
             //Move towards the next node.
@@ -70,5 +79,8 @@ public class PathFollower : MonoBehaviour
                 MyTransform.position = newPos;
             }
         }
+
+
+		Velocity = (MyTransform.position - oldPos) / Time.deltaTime;
     }
 }
