@@ -17,8 +17,10 @@ public class HumanBehavior : MonoBehaviour
 
 	public float NodYVelocity = -3.5f;
 	public float JerkHorizontalSpeed = 8.0f;
+	public float AutoAimDotMin = 0.385f;
 
 	public float KinematicsTrackerDuration = 0.05f;
+	public float KinematicsMiniTrackerDuration = 0.01f;
 	public float DisableGesturesDuration = 0.25f;
 	public int MaxLevitations = 8;
 
@@ -96,7 +98,7 @@ public class HumanBehavior : MonoBehaviour
 				{
 					//See how close the cluster is to the direction the player apparently aimed at.
 					float tempDot = Vector3.Dot(HorizontalMask(aimDir), HorizontalMask(towardsCluster));
-					if (tempDot > bestDot)
+					if (tempDot > bestDot && tempDot > AutoAimDotMin)
 					{
 						bestDot = tempDot;
 						bestPos = cluster.MyPathing.MyTransform.position;
@@ -152,8 +154,8 @@ public class HumanBehavior : MonoBehaviour
 					}
 			}
 			else if (Levitators.Count > 0 &&
-					    (HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) ||
-					     Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0)))
+					(HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) &&
+					(HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsMiniTrackerDuration)).sqrMagnitude <= (JerkHorizontalSpeed * JerkHorizontalSpeed))))
 			{
 				Vector3 pos = FindTargetLookPos();
 				foreach (Levitatable lev in Levitators)
@@ -163,9 +165,9 @@ public class HumanBehavior : MonoBehaviour
 				Levitators.Clear();
 
 				src.PlayOneShot(src.clip);
-				Transform tr =((GameObject)Instantiate(ThrowParticlesPrefab)).transform;
-				tr.position = CameraTracker.position + (CameraTracker.forward * 2.0f);
-				tr.parent = CameraTracker;
+				//Transform tr =((GameObject)Instantiate(ThrowParticlesPrefab)).transform;
+				//tr.position = CameraTracker.position + (CameraTracker.forward * 2.0f);
+				//tr.parent = CameraTracker;
 			}
 		}
 	}
