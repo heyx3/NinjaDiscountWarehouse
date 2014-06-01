@@ -2,6 +2,7 @@
 
 
 [RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(Levitatable))]
 public class DeadNinja : MonoBehaviour
 {
 	public float KillDistanceFromPlayer = 100.0f;
@@ -13,6 +14,7 @@ public class DeadNinja : MonoBehaviour
 
 	private Transform tr;
 	private Rigidbody rgd;
+	private Levitatable lvt;
 
 
 	private void AttachKillComponent()
@@ -26,6 +28,7 @@ public class DeadNinja : MonoBehaviour
 	{
 		tr = transform;
 		rgd = rigidbody;
+		lvt = GetComponent<Levitatable>();
 
 		WillDieSoon = Random.value > ChanceOfInstaDeath;
 		if (WillDieSoon)
@@ -36,9 +39,14 @@ public class DeadNinja : MonoBehaviour
 
 	void Update()
 	{
-		if (!WillDieSoon &&
-			(HumanBehavior.Instance.MyTransform.position - tr.position).sqrMagnitude < (KillDistanceFromPlayer * KillDistanceFromPlayer) &&
-			rgd.velocity.sqrMagnitude < (KillMaxSpeed * KillMaxSpeed))
+		if (WillDieSoon && lvt.State == Levitatable.States.Levitated)
+		{
+			WillDieSoon = false;
+			GameObject.Destroy(GetComponent<KillAfterTime>());
+		}
+		else if (!WillDieSoon && lvt.State != Levitatable.States.Levitated &&
+		    	 (HumanBehavior.Instance.MyTransform.position - tr.position).sqrMagnitude < (KillDistanceFromPlayer * KillDistanceFromPlayer) &&
+			      rgd.velocity.sqrMagnitude < (KillMaxSpeed * KillMaxSpeed))
 		{
 			AttachKillComponent();
 		}
