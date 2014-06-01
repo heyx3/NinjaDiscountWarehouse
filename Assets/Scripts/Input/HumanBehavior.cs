@@ -145,9 +145,9 @@ public class HumanBehavior : MonoBehaviour
 			else if (HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) ||
 					Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))
 			{
-				Vector3 dir = FindTargetLookPos();
+				Vector3 pos = FindTargetLookPos();
 				foreach (Levitatable lev in Levitators)
-					lev.Throw(dir);
+					lev.Throw((pos - lev.MyRigid.position).normalized);
 				Levitators.Clear();
 			}
 		}
