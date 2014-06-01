@@ -43,7 +43,7 @@ public class HumanBehavior : MonoBehaviour
 		//First cast a ray to see what wall is hit.
 		RaycastHit wallCast = new RaycastHit();
 		int layer = (1 << LayerMask.NameToLayer("Blockers"));
-		if (!Physics.Raycast(new Ray(CameraTracker.position, horizontalDir), out wallCast, 99999.0f, layer))
+		if (!Physics.Raycast(new Ray(CameraTracker.position, dir), out wallCast, 99999.0f, layer))
 		{
 			Debug.LogError("Raycast for blockers didn't hit anything! The player is looking at a hole into the endless abyss.");
 			return ret;
@@ -69,7 +69,7 @@ public class HumanBehavior : MonoBehaviour
 	}
 	private Vector3 FindTargetLookPos()
 	{
-		Vector3 aimDir = FaceTracker.VelocityLogs[FaceTracker.GetLogIndex(KinematicsTrackerDuration)].normalized;
+		Vector3 aimDir = FaceTracker.ForwardLogs[FaceTracker.GetLogIndex(0)].normalized;
 
 		//For each ninja cluster, cast some rays to see which ones are visible and pick the visible one closest to the direction the player aimed at.
 
