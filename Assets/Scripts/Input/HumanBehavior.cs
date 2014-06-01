@@ -64,9 +64,44 @@ public class HumanBehavior : MonoBehaviour
 	}
 	private Vector3 FindTargetLookPos()
 	{
-		Vector3 faceDir = FaceTracker.VelocityLogs[FaceTracker.GetLogIndex(KinematicsTrackerDuration)].normalized;
+		Vector3 aimDir = FaceTracker.VelocityLogs[FaceTracker.GetLogIndex(KinematicsTrackerDuration)].normalized;
 
-		return faceDir;
+		//For each ninja cluster, cast some rays to see which ones are visible and pick the visible one closest to the direction the player aimed at.
+
+		RaycastHit hit;
+		int raycastLayers = (1 << LayerMask.NameToLayer("Blockers"));
+		float bestDot = 0.0f;
+		Vector3 bestPos = MyTransform.position + (aimDir * 9999.0f);
+
+		foreach (NinjaCluster cluster in NinjaCluster.AllClusters)
+		{
+			//Get vectors towards the cluster and perpendicular to the cluster.
+			Vector3 towardsCluster = (cluster.MyPathing.MyTransform.position - CameraTracker.position).normalized;
+			Vector3 toSide = Vector3.Cross(towardsCluster, new Vector3(0.0f, 1.0f, 0.0f));
+			
+			//Cast a ray on the left, right, and center of the cluster's sphere.
+			for (int i = -1; i <= 1; ++i)
+			{
+				Vector3 pos = cluster.MyPathing.MyTransform.position + (i * toSide * cluster.MaxNinjaDistance);
+				Vector3 toPos = (pos - CameraTracker.position);
+				float distance = toPos.magnitude;
+
+				//If no blockers were hit, there is a line of sight to this spot on the cluster.
+				if (!Physics.Raycast(CameraTracker.position, toPos / distance, out hit, distance, raycastLayers))
+				{
+					//See how close the cluster is to the direction the player apparently aimed at.
+					float tempDot = Vector3.Dot(HorizontalMask(aimDir), HorizontalMask(towardsCluster));
+					if (tempDot > bestDot)
+					{
+						bestDot = tempDot;
+						bestPos = cluster.MyPathing.MyTransform.position;
+						break;
+					}
+				}
+			}
+		}
+
+		return bestPos;
 	}
 
 
@@ -110,9 +145,9 @@ public class HumanBehavior : MonoBehaviour
 			else if (HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) ||
 					Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))
 			{
-				Vector3 dir = FindTargetLookPos();
+				Vector3 pos = FindTargetLookPos();
 				foreach (Levitatable lev in Levitators)
-					lev.Throw(dir);
+					lev.Throw((pos - lev.MyRigid.position).normalized);
 				Levitators.Clear();
 			}
 		}
