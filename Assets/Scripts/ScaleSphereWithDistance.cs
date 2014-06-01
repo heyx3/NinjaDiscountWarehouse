@@ -16,6 +16,10 @@ public class ScaleSphereWithDistance : MonoBehaviour
 	void Awake()
 	{
 		sphere = GetComponent<SphereCollider>();
+	}
+
+	void Start()
+	{
 		BaseSphereRadius = sphere.radius;
 	}
 

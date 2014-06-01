@@ -62,6 +62,12 @@ public class HumanBehavior : MonoBehaviour
 
 		return ret;
 	}
+	private Vector3 FindTargetLookPos()
+	{
+		Vector3 faceDir = FaceTracker.VelocityLogs[FaceTracker.GetLogIndex(KinematicsTrackerDuration)].normalized;
+
+		return faceDir;
+	}
 
 
 	void Awake()
@@ -104,7 +110,7 @@ public class HumanBehavior : MonoBehaviour
 			else if (HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) ||
 					Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))
 			{
-				Vector3 dir = HeadTracker.VelocityLogs[HeadTracker.GetLogIndex(KinematicsTrackerDuration)].normalized;//HeadTracker.GetAverageVelocity(KinematicsTrackerDuration).normalized;
+				Vector3 dir = FindTargetLookPos();
 				foreach (Levitatable lev in Levitators)
 					lev.Throw(dir);
 				Levitators.Clear();
