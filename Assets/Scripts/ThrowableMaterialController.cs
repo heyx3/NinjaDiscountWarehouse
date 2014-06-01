@@ -18,6 +18,15 @@ public class ThrowableMaterialController : MonoBehaviour
 		if (Instance != null)
 			throw new UnityException("More than one 'ThrowableMaterialController' is in play!");
 		Instance = this;
+
+		if (ThrowableMat != null)
+		{
+			//Modify the material so a copy is created.
+			Color old = ThrowableMat.color;
+			ThrowableMat.color = Color.black;
+			ThrowableMat.color = Color.white;
+			ThrowableMat.color = old;
+		}
 	}
 
 	void Update()

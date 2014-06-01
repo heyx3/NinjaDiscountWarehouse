@@ -12,6 +12,7 @@ public class NinjaClusterSpawner : MonoBehaviour
 
 
 	public GameObject ClusterPrefab = null, NinjaPrefab = null;
+	public int MaxNinja = 32;
 
 
 	public float MinSpawnInterval = 2.5f,
@@ -43,6 +44,9 @@ public class NinjaClusterSpawner : MonoBehaviour
 	{
 		yield return new WaitForSeconds(Random.Range(MinSpawnInterval, MaxSpawnInterval));
 
+		//Count the number of ninjas currently available.
+		int totalNinjas = NinjaCluster.AllClusters.Sum(cl => cl.NinjaAIs.Count);
+
 		//Create the cluster.
 		NinjaCluster clust = ((GameObject)Instantiate(ClusterPrefab)).GetComponent<NinjaCluster>();
 		int startIndex = Random.Range(0, ClusterStarts.Length);
@@ -53,7 +57,7 @@ public class NinjaClusterSpawner : MonoBehaviour
 		int nNinjas = Random.Range(MinNumbNinjas, MaxNumbNinjas);
 		Vector3 spawnPos = clust.MyPathing.MyTransform.position;
 		float spawnRadius = ClusterStarts[startIndex].NinjaSpawnRadius;
-		for (int i = 0; i < nNinjas; ++i)
+		for (int i = 0; i < nNinjas && (totalNinjas + i) < MaxNinja; ++i)
 		{
 			NinjaAIPlayerInput nj = ((GameObject)Instantiate(NinjaPrefab)).GetComponent<NinjaAIPlayerInput>();
 			if (nj == null)
@@ -65,6 +69,7 @@ public class NinjaClusterSpawner : MonoBehaviour
 			nj.MyTransform.position = spawnPos + (randRot * nj.MyTransform.position);
 		}
 
+		//Restart the countdown.
 		StartCoroutine(SpawnClusterCoroutine());
 	}
 }

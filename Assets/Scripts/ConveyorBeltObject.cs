@@ -13,7 +13,7 @@ public class ConveyorBeltObject : MonoBehaviour
 	public float RespawnRadius = 100.0f;
 	public float RespawnMaxSpeed = 0.5f;
 
-	private static Dictionary<PathNode, ConveyorBeltObject> CurrentlySpawning = new Dictionary<PathNode, ConveyorBeltObject>();
+	private static ConveyorBeltObject spawningObject;
 	private bool isWaitingToSpawn;
 
 	public bool IsOnBelt { get { return rgd.isKinematic && !lvt.enabled; } }
@@ -30,11 +30,10 @@ public class ConveyorBeltObject : MonoBehaviour
 		if (PathStarts == null)
 		{
 			PathStarts = GameObject.FindObjectsOfType<ConveyorBeltStartNode>().Select(cbsn => cbsn.GetComponent<PathNode>()).ToArray();
-			foreach (PathNode pn in PathStarts)
-				CurrentlySpawning.Add(pn, null);
 		}
 
 		isWaitingToSpawn = true;
+		spawningObject = null;
 	}
 
 
@@ -50,6 +49,8 @@ public class ConveyorBeltObject : MonoBehaviour
 				lvt.enabled = true;
 				rgd.isKinematic = false;
 			};
+
+		pf.enabled = false;
 	}
 
 	private void Respawn(int index)
@@ -61,7 +62,7 @@ public class ConveyorBeltObject : MonoBehaviour
 		pf.enabled = true;
 
 		pf.Current = PathStarts[index];
-		CurrentlySpawning[pf.Current] = this;
+		spawningObject = this;
 		rgd.position = pf.Current.MyTransform.position;
 	}
 
@@ -70,29 +71,28 @@ public class ConveyorBeltObject : MonoBehaviour
 	{
 		if (isWaitingToSpawn)
 		{
-			rgd.position = new Vector3(9999.0f, 9999.0f, 9999.0f);
-
-			for (int i = 0; i < PathStarts.Length; ++i)
+			if (spawningObject == null)
 			{
-				if (CurrentlySpawning[PathStarts[i]] == null)
-				{
-					Respawn(i);
-					break;
-				}
+				Respawn(Random.Range(0, PathStarts.Length));
+			}
+			else
+			{
+				rgd.position = new Vector3(9999.0f, 9999.0f, 9999.0f);
 			}
 		}
 		else if (IsOnBelt)
 		{
-			PathNode start = pf.Current.GetPathStart(false);
-			if (CurrentlySpawning[start] == this && pf.Current != start)
+			if (spawningObject == this && pf.Current.Previous != null)
 			{
-				CurrentlySpawning[start] = null;
+				spawningObject = null;
 			}
 		}
 		else if (rgd.velocity.sqrMagnitude < RespawnMaxSpeed * RespawnMaxSpeed &&
 				 (HumanBehavior.Instance.MyTransform.position - rgd.position).sqrMagnitude > RespawnRadius * RespawnRadius)
 		{
 			isWaitingToSpawn = true;
+			rgd.isKinematic = true;
+			lvt.enabled = false;
 		}
 	}
 

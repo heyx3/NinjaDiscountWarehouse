@@ -76,6 +76,12 @@ public class Levitatable : MonoBehaviour
 			ThrowableMeshRenderer.enabled = false;
 	}
 
+	void Start()
+	{
+		if (ThrowableMeshRenderer != null)
+			ThrowableMeshRenderer.material = ThrowableMaterialController.Instance.ThrowableMat;
+	}
+
 	void FixedUpdate()
 	{
 		MyRigid.useGravity = false;
@@ -84,10 +90,13 @@ public class Levitatable : MonoBehaviour
 		{
 			case States.Inert:
 				MyRigid.AddForce(new Vector3(0.0f, -GravityAcceleration, 0.0f), ForceMode.Acceleration);
+				ThrowableMeshRenderer.enabled = false;
 				break;
 
 
 			case States.Levitated:
+
+				ThrowableMeshRenderer.enabled = true;
 
 				Vector3 playerPos = Human.MyTransform.position;
 				Vector3 targetPos = Levitating.GetTargetPosition(playerPos),
@@ -113,6 +122,8 @@ public class Levitatable : MonoBehaviour
 
 
 			case States.Thrown:
+
+				ThrowableMeshRenderer.enabled = false;
 
 				//Update time until inert.
 				Throwing.TimeTillInert -= Time.deltaTime;
@@ -147,12 +158,6 @@ public class Levitatable : MonoBehaviour
 									  Levitating.InitialRotImpulseVariance.y * (-1.0f + (2.0f * Random.value)),
 									  Levitating.InitialRotImpulseVariance.z * (-1.0f + (2.0f * Random.value))),
 						  ForceMode.Impulse);
-
-		if (ThrowableMeshRenderer != null)
-		{
-			ThrowableMeshRenderer.enabled = true;
-			ThrowableMeshRenderer.material = ThrowableMaterialController.Instance.ThrowableMat;
-		}
 	}
 	/// <summary>
 	/// Changes state to throwing.
@@ -162,10 +167,5 @@ public class Levitatable : MonoBehaviour
 		State = States.Thrown;
 		Throwing.TimeTillInert = Throwing.AccelerationDuration;
 		Throwing.Direction = dir;
-
-		if (ThrowableMeshRenderer != null)
-		{
-			ThrowableMeshRenderer.enabled = false;
-		}
 	}
 }
