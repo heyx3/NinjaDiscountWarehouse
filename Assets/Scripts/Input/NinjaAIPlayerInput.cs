@@ -14,28 +14,67 @@ public class NinjaAIPlayerInput : PlayerInput
 
 
 	public NinjaCluster Cluster = null;
+	public GameObject DeadNinjaPrefab = null;
 
 	public float MaxSeparationForce = 10.0f,
 				 MaxSeparationForceDistance = 10.0f,
 				 SeparationForceDistancePower = 1.0f,
 				 ClusterForce = 10.0f;
+	public float MomentumToDie = 10.0f;
 
 
 	void Start()
 	{
 		if (Cluster == null)
-			throw new UnityException("No cluster associated with this Ninja!");
-		Cluster.NinjaAIs.Add(this);
+			Debug.LogWarning("No cluster associated with this Ninja!");
+		else
+			Cluster.NinjaAIs.Add(this);
 	}
 	void OnDestroy()
 	{
-		Cluster.NinjaAIs.Remove(this);
+		if (Cluster != null)
+			Cluster.NinjaAIs.Remove(this);
+	}
+
+	void OnCollisionEnter(Collision coll)
+	{
+		Levitatable levt = coll.gameObject.GetComponent<Levitatable>();
+		if (levt != null && (levt.MyRigid.mass * levt.MyRigid.velocity.magnitude) >= MomentumToDie)
+		{
+			if (DeadNinjaPrefab != null)
+			{
+				Transform tr = ((GameObject)Instantiate(DeadNinjaPrefab)).transform;
+				tr.position = MyTransform.position;
+				tr.rotation = MyTransform.rotation;
+
+				Rigidbody rgd = tr.GetComponent<Rigidbody>();
+				//Knock the ninja back.
+				rgd.AddForce(levt.MyRigid.velocity * levt.MyRigid.mass, ForceMode.Impulse);
+				//Also knock him onto his ass.
+				Vector3 originalUp = new Vector3(0.0f, 1.0f, 0.0f);
+				Vector3 newUp = HorizontalMask(levt.MyRigid.velocity);
+				Quaternion toRotate = Quaternion.FromToRotation(originalUp, newUp);
+				Vector3 axis;
+				const float speed = 1.0f;
+				float angle;
+				toRotate.ToAngleAxis(out angle, out axis);
+				rgd.AddTorque(axis * speed * levt.MyRigid.mass, ForceMode.Impulse);
+			}
+
+			Destroy(gameObject);
+		}
 	}
 
 	void FixedUpdate()
 	{
 		//Rotate to face the player.
-		MyTransform.forward = (HumanBehavior.Instance.MyTransform.position - MyTransform.position).normalized;
+		MyTransform.forward = HorizontalMask((HumanBehavior.Instance.MyTransform.position - MyTransform.position)).normalized;
+
+		if (Cluster == null)
+		{
+			moveInput = Vector2.zero;
+			return;
+		}
 
 
 		//Move towards the cluster center but away from other ninjas.
