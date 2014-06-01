@@ -89,27 +89,21 @@ public class Levitatable : MonoBehaviour
 
 			case States.Levitated:
 
-				Vector3 playerPos = Human.MyTransform.position,
-						towardsPlayer = playerPos - MyRigid.position;
+				Vector3 playerPos = Human.MyTransform.position;
 				Vector3 targetPos = Levitating.GetTargetPosition(playerPos),
 					    towardsTarget = targetPos - MyRigid.position;
-				Vector3 playerToTarget = playerPos - targetPos;
 
 				//Treat horizontal and vertical accel separately.
 
 				//Horizontal.
-				Vector3 towardsPlayer_partial = HorizontalMask(towardsPlayer),
-						towardsTarget_partial = HorizontalMask(towardsTarget),
-						playerToTarget_partial = HorizontalMask(playerToTarget);
+				Vector3 towardsTarget_partial = HorizontalMask(towardsTarget);
 				if (towardsTarget_partial.sqrMagnitude != 0.0f)
 					MyRigid.MovePosition(MyRigid.position +
 										 (Time.deltaTime * Levitating.HorizontalMovement.VelocityTowardsTarget *
 														   Levitating.HorizontalMovement.VelocityDistanceScale * towardsTarget_partial));
 
 				//Vertical.
-				towardsPlayer_partial = VerticalMask(towardsPlayer);
 				towardsTarget_partial = VerticalMask(towardsTarget);
-				playerToTarget_partial = VerticalMask(playerToTarget);
 				if (towardsTarget_partial.sqrMagnitude != 0.0f)
 					MyRigid.MovePosition(MyRigid.position +
 										 (Time.deltaTime * Levitating.VerticalMovement.VelocityTowardsTarget *
