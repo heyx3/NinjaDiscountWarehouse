@@ -96,7 +96,7 @@ public class ConveyorBeltObject : MonoBehaviour
 		}
 	}
 
-	void OnDrawGizmos()
+	void OnDrawGizmosSelected()
 	{
 		Gizmos.color = new Color(1.0f, 1.0f, 1.0f, 0.05f);
 		Gizmos.DrawSphere(GameObject.FindObjectOfType<HumanBehavior>().transform.position, RespawnRadius);
