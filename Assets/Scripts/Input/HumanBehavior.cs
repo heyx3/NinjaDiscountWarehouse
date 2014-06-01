@@ -1,15 +1,19 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 
 /// <summary>
 /// Handles behavior for the player playing this game.
 /// </summary>
+[RequireComponent(typeof(AudioSource))]
 public class HumanBehavior : MonoBehaviour
 {
 	public static HumanBehavior Instance { get; private set; }
 	private static Vector3 HorizontalMask(Vector3 inV) { return new Vector3(inV.x, 0.0f, inV.z); }
 
+
+	public GameObject ThrowParticlesPrefab = null;
 
 	public float NodYVelocity = -3.5f;
 	public float JerkHorizontalSpeed = 8.0f;
@@ -18,7 +22,8 @@ public class HumanBehavior : MonoBehaviour
 	public float DisableGesturesDuration = 0.25f;
 	public int MaxLevitations = 8;
 
-	private float timeSinceLastGesture = 9999.0f;
+	private float timeSinceLastGesture = 0.0f;
+	private AudioSource src;
 
 	public KinematicsTracker HeadTracker = null,
 							 FaceTracker = null;
@@ -122,11 +127,15 @@ public class HumanBehavior : MonoBehaviour
 
 		MyTransform = transform;
 		Levitators = new List<Levitatable>();
+
+		src = audio;
 	}
 
 	void Update()
 	{
 		timeSinceLastGesture += Time.deltaTime;
+
+		Levitators = Levitators.Where(lv => lv != null && lv.MyRigid != null).ToList();
 
 		if (timeSinceLastGesture > DisableGesturesDuration)
 		{
@@ -142,13 +151,21 @@ public class HumanBehavior : MonoBehaviour
 						lev.Levitate();
 					}
 			}
-			else if (HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) ||
-					Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0))
+			else if (Levitators.Count > 0 &&
+					    (HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) ||
+					     Input.GetKey(KeyCode.Space) || Input.GetMouseButton(0)))
 			{
 				Vector3 pos = FindTargetLookPos();
 				foreach (Levitatable lev in Levitators)
+				{
 					lev.Throw((pos - lev.MyRigid.position).normalized);
+				}
 				Levitators.Clear();
+
+				src.PlayOneShot(src.clip);
+				Transform tr =((GameObject)Instantiate(ThrowParticlesPrefab)).transform;
+				tr.position = CameraTracker.position + (CameraTracker.forward * 2.0f);
+				tr.parent = CameraTracker;
 			}
 		}
 	}

@@ -20,7 +20,6 @@ public class DeadNinja : MonoBehaviour
 		WillDieSoon = true;
 		KillAfterTime kat = gameObject.AddComponent<KillAfterTime>();
 		kat.TimeTillDeath = DeathWaitTime;
-		rgd.isKinematic = true;
 	}
 
 	void Awake()
@@ -28,9 +27,7 @@ public class DeadNinja : MonoBehaviour
 		tr = transform;
 		rgd = rigidbody;
 
-
-		WillDieSoon = Random.value > 0.5f;
-
+		WillDieSoon = Random.value > ChanceOfInstaDeath;
 		if (WillDieSoon)
 		{
 			AttachKillComponent();
