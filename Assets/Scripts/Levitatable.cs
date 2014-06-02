@@ -5,6 +5,7 @@
 /// Provides behavior for an object that can be levitated.
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(AudioSource))]
 public class Levitatable : MonoBehaviour
 {
 	private static HumanBehavior Human { get { return HumanBehavior.Instance; } }
@@ -64,6 +65,7 @@ public class Levitatable : MonoBehaviour
 
 
 	public Rigidbody MyRigid { get; private set; }
+	public FadeLoopNoise HoveringNoise { get; private set; }
 
 
 	void Awake()
@@ -80,6 +82,8 @@ public class Levitatable : MonoBehaviour
 	{
 		if (ThrowableMeshRenderer != null)
 			ThrowableMeshRenderer.material = ThrowableMaterialController.Instance.ThrowableMat;
+
+		HoveringNoise = new FadeLoopNoise(AudioSources.Instance.LevitateLoopNoiseSourcePrefab, transform, "HoverLoop");
 	}
 
 	void FixedUpdate()
@@ -95,6 +99,8 @@ public class Levitatable : MonoBehaviour
 
 
 			case States.Levitated:
+
+				HoveringNoise.UpdateLoop();
 
 				ThrowableMeshRenderer.enabled = true;
 
@@ -158,6 +164,8 @@ public class Levitatable : MonoBehaviour
 									  Levitating.InitialRotImpulseVariance.y * (-1.0f + (2.0f * Random.value)),
 									  Levitating.InitialRotImpulseVariance.z * (-1.0f + (2.0f * Random.value))),
 						  ForceMode.Impulse);
+
+		HoveringNoise.StartLoop();
 	}
 	/// <summary>
 	/// Changes state to throwing.
@@ -167,5 +175,7 @@ public class Levitatable : MonoBehaviour
 		State = States.Thrown;
 		Throwing.TimeTillInert = Throwing.AccelerationDuration;
 		Throwing.Direction = dir;
+
+		HoveringNoise.EndLoop();
 	}
 }

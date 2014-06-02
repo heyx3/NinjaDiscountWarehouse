@@ -13,7 +13,7 @@ public abstract class PlayerInput : MonoBehaviour
 	public abstract Vector2 MovementInput { get; }
 
 	public CharacterController CharContr { get; private set; }
-	public Transform MyTransform { get; private set; }
+	public Transform MyTransform { get; set; }
 
 
 	protected virtual void Awake()

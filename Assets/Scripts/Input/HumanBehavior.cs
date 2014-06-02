@@ -19,17 +19,23 @@ public class HumanBehavior : MonoBehaviour
 	public float JerkHorizontalSpeed = 8.0f;
 	public float AutoAimDotMin = 0.385f;
 
+	public float ComboDurationMax = 0.5f;
+	public float ComboBreakTime = 1.0f;
+	public int EnemyComboAmount = 6;
+	private float TimeSinceLastCombo = 9999.0f;
+	private List<float> RecentlyHitEnemies = new List<float>();
+
 	public float KinematicsTrackerDuration = 0.05f;
 	public float KinematicsMiniTrackerDuration = 0.01f;
 	public float DisableGesturesDuration = 0.25f;
 	public int MaxLevitations = 8;
 
-	private float timeSinceLastGesture = 0.0f;
-	private AudioSource src;
-
 	public KinematicsTracker HeadTracker = null,
 							 FaceTracker = null;
 	public Transform CameraTracker = null;
+
+	private float timeSinceLastGesture = 0.0f;
+	private AudioSource src;
 	
 
 	public Transform MyTransform { get; private set; }
@@ -111,6 +117,17 @@ public class HumanBehavior : MonoBehaviour
 		return bestPos;
 	}
 
+	public void HitEnemy(AudioSource enemySource)
+	{
+		RecentlyHitEnemies.Add(0.0f);
+		if (RecentlyHitEnemies.Count > EnemyComboAmount && TimeSinceLastCombo > ComboBreakTime)
+		{
+			enemySource.PlayOneShot(AudioSources.Instance.EnemyComboNoise);
+			TimeSinceLastCombo = 0.0f;
+		}
+		else enemySource.PlayOneShot(AudioSources.Instance.EnemyKillNoise);
+	}
+
 
 	void Awake()
 	{
@@ -137,6 +154,15 @@ public class HumanBehavior : MonoBehaviour
 	{
 		timeSinceLastGesture += Time.deltaTime;
 
+		TimeSinceLastCombo += Time.deltaTime;
+		for (int i = RecentlyHitEnemies.Count - 1; i >= 0; --i)
+		{
+			RecentlyHitEnemies[i] += Time.deltaTime;
+			if (RecentlyHitEnemies[i] > ComboDurationMax)
+				RecentlyHitEnemies.RemoveAt(i);
+		}
+
+		//Remove levitators that have disappeared/died/respawned.
 		Levitators = Levitators.Where(lv => lv != null && lv.MyRigid != null).ToList();
 
 		if (timeSinceLastGesture > DisableGesturesDuration)
@@ -144,14 +170,20 @@ public class HumanBehavior : MonoBehaviour
 			if (HeadTracker.GetAverageVelocity(KinematicsTrackerDuration).y < NodYVelocity)
 			{
 				timeSinceLastGesture = 0.0f;
+				int newLevitations = 0;
 
 				Vector3 forward = HeadTracker.GetForwardVectorAtTime(KinematicsTrackerDuration).Forward;
 				foreach (Levitatable lev in FindLevitators(forward))
+				{
 					if (!Levitators.Contains(lev))
 					{
 						Levitators.Add(lev);
 						lev.Levitate();
+						newLevitations += 1;
 					}
+				}
+
+				if (newLevitations > 0) src.PlayOneShot(AudioSources.Instance.LevitateStartNoise);
 			}
 			else if (Levitators.Count > 0 &&
 					(HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) &&
@@ -165,9 +197,6 @@ public class HumanBehavior : MonoBehaviour
 				Levitators.Clear();
 
 				src.PlayOneShot(src.clip);
-				//Transform tr =((GameObject)Instantiate(ThrowParticlesPrefab)).transform;
-				//tr.position = CameraTracker.position + (CameraTracker.forward * 2.0f);
-				//tr.parent = CameraTracker;
 			}
 		}
 	}

@@ -4,6 +4,7 @@
 /// <summary>
 /// The player input for an AI-controlled ninja.
 /// </summary>
+[RequireComponent(typeof(AudioSource))]
 public class NinjaAIPlayerInput : PlayerInput
 {
 	private static Vector3 HorizontalMask(Vector3 inV) { return new Vector3(inV.x, 0.0f, inV.z); }
@@ -22,6 +23,14 @@ public class NinjaAIPlayerInput : PlayerInput
 				 ClusterForce = 10.0f;
 	public float MomentumToDie = 10.0f;
 
+
+	private AudioSource src;
+
+
+	void Awake()
+	{
+		src = audio;
+	}
 
 	void Start()
 	{
@@ -47,7 +56,10 @@ public class NinjaAIPlayerInput : PlayerInput
 				tr.position = MyTransform.position;
 				tr.rotation = MyTransform.rotation;
 
+				HumanBehavior.Instance.HitEnemy(src);
+
 				Rigidbody rgd = tr.GetComponent<Rigidbody>();
+
 				//Knock the ninja back.
 				rgd.AddForce(levt.MyRigid.velocity * levt.MyRigid.mass, ForceMode.Impulse);
 				//Also knock him onto his ass.

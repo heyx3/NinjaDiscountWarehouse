@@ -64,6 +64,7 @@ public class NinjaClusterSpawner : MonoBehaviour
 				throw new UnityException("Spawned ninja didn't have 'NinjaAIPlayerInput' component!");
 
 			nj.Cluster = clust;
+			nj.MyTransform = nj.transform;
 			nj.MyTransform.position = new Vector3(Random.value * spawnRadius, 0.0f, 0.0f);
 			Quaternion randRot = Quaternion.AngleAxis(Random.value * 360.0f, new Vector3(0.0f, 1.0f, 0.0f));
 			nj.MyTransform.position = spawnPos + (randRot * nj.MyTransform.position);

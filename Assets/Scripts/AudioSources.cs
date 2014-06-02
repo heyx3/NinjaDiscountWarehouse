@@ -9,7 +9,9 @@ public class AudioSources : MonoBehaviour
 	public static AudioSources Instance { get; private set; }
 
 
-	public AudioSource BarrelBumpNoise;
+	public AudioClip EnemyKillNoise, EnemyComboNoise,
+					 LevitateStartNoise;
+	public GameObject LevitateLoopNoiseSourcePrefab;
 
 
 	void Awake()
