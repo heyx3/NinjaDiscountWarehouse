@@ -25,6 +25,8 @@ public class HumanBehavior : MonoBehaviour
 	private float TimeSinceLastCombo = 9999.0f;
 	private List<float> RecentlyHitEnemies = new List<float>();
 
+	public float EnemyKillMaxSoundDist = 100.0f;
+
 	public float KinematicsTrackerDuration = 0.05f;
 	public float KinematicsMiniTrackerDuration = 0.01f;
 	public float DisableGesturesDuration = 0.25f;
@@ -129,16 +131,19 @@ public class HumanBehavior : MonoBehaviour
 	public void HitEnemy(AudioSource enemySource)
 	{
 		RecentlyHitEnemies.Add(0.0f);
+		float distLerp = Vector3.Distance(enemySource.transform.position, MyTransform.position) / EnemyKillMaxSoundDist;
+		distLerp = Mathf.Clamp01(distLerp);
+		distLerp = 1.0f - distLerp;
 		if (RecentlyHitEnemies.Count > EnemyComboAmount && TimeSinceLastCombo > ComboBreakTime)
 		{
-			enemySource.volume = AudioSources.Instance.EnemyComboVolume;
-			enemySource.PlayOneShot(AudioSources.Instance.EnemyComboNoise);
+			src.volume = AudioSources.Instance.EnemyComboVolume * distLerp;
+			src.PlayOneShot(AudioSources.Instance.EnemyComboNoise);
 			TimeSinceLastCombo = 0.0f;
 		}
 		else
 		{
-			enemySource.volume = AudioSources.Instance.EnemyKillVolume;
-			enemySource.PlayOneShot(AudioSources.Instance.EnemyKillNoise);
+			src.volume = AudioSources.Instance.EnemyKillVolume * distLerp;
+			src.PlayOneShot(AudioSources.Instance.EnemyKillNoise);
 		}
 	}
 
