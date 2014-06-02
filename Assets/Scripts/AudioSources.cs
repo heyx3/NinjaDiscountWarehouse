@@ -13,6 +13,10 @@ public class AudioSources : MonoBehaviour
 					 LevitateStartNoise;
 	public GameObject LevitateLoopNoiseSourcePrefab;
 
+	public float EnemyKillVolume = 1.0f, EnemyComboVolume = 1.0f,
+				 LevitateStartVolume = 0.1f,
+				 ThrowNoiseVolume = 1.0f;
+
 
 	void Awake()
 	{

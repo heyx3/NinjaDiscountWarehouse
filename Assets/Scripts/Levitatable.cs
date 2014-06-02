@@ -74,6 +74,8 @@ public class Levitatable : MonoBehaviour
 		MyRigid.useGravity = false;
 		State = States.Inert;
 
+		HoveringNoise = null;
+
 		if (ThrowableMeshRenderer != null)
 			ThrowableMeshRenderer.enabled = false;
 	}
@@ -82,8 +84,9 @@ public class Levitatable : MonoBehaviour
 	{
 		if (ThrowableMeshRenderer != null)
 			ThrowableMeshRenderer.material = ThrowableMaterialController.Instance.ThrowableMat;
-
-		HoveringNoise = new FadeLoopNoise(AudioSources.Instance.LevitateLoopNoiseSourcePrefab, transform, "HoverLoop");
+		
+		if (HoveringNoise == null)
+			HoveringNoise = new FadeLoopNoise(AudioSources.Instance.LevitateLoopNoiseSourcePrefab, transform, "HoverLoop");
 	}
 
 	void FixedUpdate()
@@ -165,6 +168,7 @@ public class Levitatable : MonoBehaviour
 									  Levitating.InitialRotImpulseVariance.z * (-1.0f + (2.0f * Random.value))),
 						  ForceMode.Impulse);
 
+		if (HoveringNoise == null) HoveringNoise = new FadeLoopNoise(AudioSources.Instance.LevitateLoopNoiseSourcePrefab, transform, "Levitation loop");
 		HoveringNoise.StartLoop();
 	}
 	/// <summary>

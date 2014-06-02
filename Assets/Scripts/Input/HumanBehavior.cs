@@ -60,16 +60,20 @@ public class HumanBehavior : MonoBehaviour
 		//Now cast a ray as far as the wall (plus a little extra) for throwable objects.
 		float dist = wallCast.distance + 5.0f;
 		layer = (1 << LayerMask.NameToLayer("Throwable"));
-		RaycastHit[] hits = Physics.RaycastAll(CameraTracker.position, dir, dist, layer);
-		//GameDirector.Instance.CreateLine(CameraTracker.position, dir);
-
-		//Add each hit object to the list.
-		for (int i = 0; i < hits.Length && ret.Count < MaxLevitations; ++i)
+		for (int j = -1; j <= 1; ++j)
 		{
-			Levitatable levComponent = hits[i].transform.GetComponent<Levitatable>();
-			if (levComponent == null)
-				throw new UnityException("Object uses 'Throwable' layer but doesn't have a Levitatable component! Name: " + hits[i].transform.gameObject.name);
-			ret.Add(levComponent);
+			RaycastHit[] hits = Physics.RaycastAll(CameraTracker.position, dir + new Vector3(j * 0.5f, j * 0.5f, j * 0.5f).normalized,
+												   dist, layer);
+			//GameDirector.Instance.CreateLine(CameraTracker.position, dir);
+
+			//Add each hit object to the list.
+			for (int i = 0; i < hits.Length && ret.Count < MaxLevitations; ++i)
+			{
+				Levitatable levComponent = hits[i].transform.GetComponent<Levitatable>();
+				if (levComponent == null)
+					throw new UnityException("Object uses 'Throwable' layer but doesn't have a Levitatable component! Name: " + hits[i].transform.gameObject.name);
+				ret.Add(levComponent);
+			}
 		}
 
 
@@ -91,7 +95,9 @@ public class HumanBehavior : MonoBehaviour
 			//Get vectors towards the cluster and perpendicular to the cluster.
 			Vector3 towardsCluster = (cluster.MyPathing.MyTransform.position - CameraTracker.position).normalized;
 			Vector3 toSide = Vector3.Cross(towardsCluster, new Vector3(0.0f, 1.0f, 0.0f));
-			
+
+			bool shouldBreak = false;
+
 			//Cast a ray on the left, right, and center of the cluster's sphere.
 			for (int i = -1; i <= 1; ++i)
 			{
@@ -108,9 +114,12 @@ public class HumanBehavior : MonoBehaviour
 					{
 						bestDot = tempDot;
 						bestPos = cluster.MyPathing.MyTransform.position;
+						shouldBreak = true;
 						break;
 					}
 				}
+
+				if (shouldBreak) break;
 			}
 		}
 
@@ -122,10 +131,15 @@ public class HumanBehavior : MonoBehaviour
 		RecentlyHitEnemies.Add(0.0f);
 		if (RecentlyHitEnemies.Count > EnemyComboAmount && TimeSinceLastCombo > ComboBreakTime)
 		{
+			enemySource.volume = AudioSources.Instance.EnemyComboVolume;
 			enemySource.PlayOneShot(AudioSources.Instance.EnemyComboNoise);
 			TimeSinceLastCombo = 0.0f;
 		}
-		else enemySource.PlayOneShot(AudioSources.Instance.EnemyKillNoise);
+		else
+		{
+			enemySource.volume = AudioSources.Instance.EnemyKillVolume;
+			enemySource.PlayOneShot(AudioSources.Instance.EnemyKillNoise);
+		}
 	}
 
 
@@ -183,7 +197,11 @@ public class HumanBehavior : MonoBehaviour
 					}
 				}
 
-				if (newLevitations > 0) src.PlayOneShot(AudioSources.Instance.LevitateStartNoise);
+				if (newLevitations > 0)
+				{
+					src.volume = AudioSources.Instance.LevitateStartVolume;
+					src.PlayOneShot(AudioSources.Instance.LevitateStartNoise);
+				}
 			}
 			else if (Levitators.Count > 0 &&
 					(HorizontalMask(FaceTracker.GetAverageVelocity(KinematicsTrackerDuration)).sqrMagnitude >= (JerkHorizontalSpeed * JerkHorizontalSpeed) &&
@@ -196,6 +214,7 @@ public class HumanBehavior : MonoBehaviour
 				}
 				Levitators.Clear();
 
+				src.volume = AudioSources.Instance.ThrowNoiseVolume;
 				src.PlayOneShot(src.clip);
 			}
 		}
