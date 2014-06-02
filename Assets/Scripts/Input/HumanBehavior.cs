@@ -64,7 +64,7 @@ public class HumanBehavior : MonoBehaviour
 		layer = (1 << LayerMask.NameToLayer("Throwable"));
 		for (int j = -1; j <= 1; ++j)
 		{
-			RaycastHit[] hits = Physics.RaycastAll(CameraTracker.position, dir + new Vector3(j * 0.5f, j * 0.5f, j * 0.5f).normalized,
+			RaycastHit[] hits = Physics.RaycastAll(CameraTracker.position, (dir + new Vector3(0.0f, j * 0.5f, 0.0f)).normalized,
 												   dist, layer);
 			//GameDirector.Instance.CreateLine(CameraTracker.position, dir);
 
