@@ -1,4 +1,4 @@
-﻿/************************************************************************************
+/************************************************************************************
 
 Filename    :   OVRCamera.cs
 Content     :   Interface to camera class
@@ -25,6 +25,7 @@ limitations under the License.
 ************************************************************************************/
 
 using UnityEngine;
+using OVR;
 using System.Collections.Generic;
 using System.Collections;
 using System.Runtime.InteropServices;
@@ -37,152 +38,211 @@ using System.Runtime.InteropServices;
 /// and rotation. It also is responsible for properly rendering the final output, which
 /// also the final lens correction pass.
 /// </summary>
-public class OVRCamera : OVRComponent
+public class OVRCamera : MonoBehaviour
 {
-	#region Member Variables
-	// PRIVATE MEMBERS
+	/// <summary>
+	/// Types of render events we can send to the native rendering plugin.
+	/// </summary>
+	private enum EventType
+    {
+		BeginFrame = 0,
+		GetLeftEyePose = 1,
+		GetRightEyePose = 2,
+        EndFrame = 3,
+    };
+
+	#region Plugin Imports
+	private const string strOvrLib = "OculusPlugin";
+	
+	[DllImport(strOvrLib)]
+    static extern bool OVR_SetTexture(int id, System.IntPtr texture, float scale = 1);
+    [DllImport(strOvrLib)]
+    static extern bool OVR_UnityGetModeChange();
+    [DllImport(strOvrLib)]
+    static extern bool OVR_UnitySetModeChange(bool isChanged);
+	[DllImport(strOvrLib)]
+	static extern void OVR_SetEndFrameInPresent(bool isEnabled);
+	[DllImport(strOvrLib)]
+	static extern void OVR_SampleEyePose(int eyeId);
+	#endregion
+
+	#region Private Member Variables
 	// We will search for camera controller and set it here for access to its members
 	private OVRCameraController CameraController = null;
+	// 0 for left, 1 for right.
+	internal int EyeId;
+    // Tracks if we need to reset state due to mode switches or a lost graphics device
+	internal bool NeedsSetTexture;
+    // We want to check if the screen mode is changed
+    internal bool wasFullScreen;
+	#endregion
 
-	// PUBLIC MEMBERS
-	// DistortionMesh is faster then pixel shader distortion method
-	public readonly OVRDistortionMesh eyeMesh = new OVRDistortionMesh();
-	// camera position,	from root of camera to neck (translation only)
+	#region Public Member Variables
+	/// <summary>
+	// camera position, from root of camera to neck (translation only)
+	/// </summary>
 	[HideInInspector]
-	public Vector3 NeckPosition = new Vector3(0.0f, 0.0f,  0.0f);	
+	public Vector3 NeckPosition = Vector3.zero;
+	/// <summary>
 	// From neck to eye (rotation and translation; x will be different for each eye)
+	/// </summary>
 	[HideInInspector]
-	public Vector3 EyePosition  = new Vector3(0.0f, 0.09f, 0.16f);
+	public Vector3 EyePosition  = new Vector3(0.0f, Hmd.OVR_DEFAULT_NECK_TO_EYE_VERTICAL, Hmd.OVR_DEFAULT_NECK_TO_EYE_HORIZONTAL);
 
-    // True if this camera corresponds to the right eye.
-    public bool RightEye = false;
+	/// <summary>
+	/// True if this camera corresponds to the right eye.
+	/// </summary>
+	public bool RightEye = false;
+	#endregion
 
-	// STATIC MEMBERS
+	#region Static Members
+	/// <summary>
 	// We will grab the actual orientation that is used by the cameras in a shared location.
-	// This will allow multiple OVRCameraControllers to eventually be uused in a scene, and 
+	// This will allow multiple OVRCameraControllers to eventually be used in a scene, and 
 	// only one orientation will be used to syncronize all camera orientation
+	/// </summary>
 	static private Quaternion CameraOrientation = Quaternion.identity;
+	/// <summary>
 	//  This is absolute camera location from vision
+	/// </summary>
 	static private Vector3 CameraPosition = Vector3.zero;
+	/// <summary>
 	// Set an offset to the camera that will adjust our location from the 
 	// cameras center of origin (set when reset is called)
-	static private Vector3 CameraPositionOffset = Vector3.zero;
+	/// </summary>
+	static private Vector3 CameraPositionOffset = Vector3.zero;	
+	/// <summary>
+	// Set an offset to the camera that will adjust our rotation from the 
+	// camera's default orientation (set when reset is called)
+	/// </summary>
+	static private Quaternion CameraOrientationOffset = Quaternion.identity;
+	/// <summary>
 	// List of game objects to update with local camera center of origin
 	// {allows for objects that are at 0,0,0 relative to the camera to stay 
 	// rendered in camera space, to allow for visual aid).
+	/// </summary>
 	static private List<OVRCameraGameObject> CameraLocalSetList = new List<OVRCameraGameObject>();
 
-    static private RenderTexture[] CameraTexture = new RenderTexture[2];
+	/// <summary>
+	/// An optional texture to which the undistorted image will be rendered.
+	/// </summary>
+    static public RenderTexture[] CameraTexture = new RenderTexture[2];
 	#endregion
 	
-	#region Monobehaviour Member Functions	
-	/// <summary>
-	/// Awake
-	/// </summary>
-	new void Awake()
+	#region Monobehaviour Member Functions
+	void Awake()
 	{
-		base.Awake ();
+		// Force right/left state for specifically-named objects.
+		if (gameObject.name.Contains("Right"))
+			RightEye = true;
+		if (gameObject.name.Contains("Left"))
+			RightEye = false;
+		
+		EyeId = (RightEye) ? 1 : 0;
+
+		// Make sure we render to the whole target.
+		camera.rect = new Rect(0, 0, 1, 1);
+#if UNITY_EDITOR_OSX
+		OVR_SetEndFrameInPresent(false);
+#endif
 	}
 
-	/// <summary>
-	/// Start
-	/// </summary>
-	new void Start()
+	void Start()
 	{
-		base.Start ();
-		
+        NeedsSetTexture = true;
+        wasFullScreen = Screen.fullScreen;
+		StartCoroutine(CallbackCoroutine());
+
 		// Get the OVRCameraController
 		CameraController = gameObject.transform.parent.GetComponent<OVRCameraController>();
 		
 		if(CameraController == null)
-			Debug.LogWarning("WARNING: OVRCameraController not found!");
-		
-		// Set CameraTextureScale (increases the size of the texture we are rendering into
-		// for a better pixel match when post processing the image through lens distortion)
-		// If CameraTextureScale is not 1.0f, create a new texture and assign to target texture
-		// Otherwise, fall back to normal camera rendering
-		int w = 0;
-		int h = 0;
-        GetIdealResolution(ref w, ref h);
-
-        int index = (RightEye) ? 1 : 0;
-
-		if ( camera.hdr )
-			CameraTexture[index] = new RenderTexture(  w, h, 24, RenderTextureFormat.ARGBFloat );	
-		else
-            CameraTexture[index] = new RenderTexture(w, h, 24);
-			
-		// Use MSAA settings in QualitySettings for new RenderTexture
-        CameraTexture[index].antiAliasing = (QualitySettings.antiAliasing == 0) ? 1 : QualitySettings.antiAliasing;
-
-        camera.targetTexture = CameraTexture[index];
-	}
-	
-	/// <summary>
-	/// Raises the pre cull event.
-	/// </summary>
-	void OnPreCull()
-	{
-		// NOTE: Setting the camera here increases latency, but ensures
-		// that all Unity sub-systems that rely on camera location before
-		// being set to render are satisfied. 
-		if(CameraController.CallInPreRender == false)
-			SetCameraOrientation();
-	}
-	
-	/// <summary>
-	/// Raises the pre render event.
-	/// </summary>
-	void OnPreRender()
-	{
-		// NOTE: Better latency performance here, but messes up water rendering and other
-		// systems that rely on the camera to be set before PreCull takes place.
-		if(CameraController.CallInPreRender == true)
-			SetCameraOrientation();
-		
-		if(CameraController.WireMode == true)
-			GL.wireframe = true;
-
-		int index = (RightEye) ? 1 : 0;
-		
-		// Set new buffers and clear color and depth
-		if(CameraTexture[index] != null)
 		{
-			CameraTexture[index].DiscardContents();
-			Graphics.SetRenderTarget(CameraTexture[index]);
-			GL.Clear (true, true, camera.backgroundColor);
+			Debug.LogWarning("OVRCameraController not found!");
+			this.enabled = false;
+			return;
 		}
+
+		if (!CameraController.UseCameraTexture)
+			return;
+
+		// This will scale the render texture based on ideal resolution
+		CreateRenderTexture(EyeId, CameraController.CameraTextureScale);
+
+		camera.targetTexture = CameraTexture[EyeId];
+        OldScale = CameraController.ScaleRenderTarget;
+
+		OVR_SetTexture(EyeId, CameraTexture[EyeId].GetNativeTexturePtr(), CameraController.ScaleRenderTarget);
 	}
+
+    static int PendingEyeCount = 0;
+
+	void OnPreCull()
+	{        
+        if (CameraTexture[EyeId] == null)
+			return;
+
+		if (PendingEyeCount == 0)
+		{
+			GL.IssuePluginEvent((int)EventType.BeginFrame);
+		}
+
+		SetCameraOrientation();
+
+		if (PendingEyeCount < 2)
+        	PendingEyeCount++;
+
+	}
+
+	float OldScale = -1f;
 	
-	/// <summary>
-	/// Raises the post render event.
-	/// </summary>
-	void OnPostRender()
+	void OnCoroutine()
 	{
-		if(CameraController.WireMode == true)
-			GL.wireframe = false;
+		if (PendingEyeCount > 0)
+        	PendingEyeCount--;
+
+        NeedsSetTexture = NeedsSetTexture || ((CameraController.ScaleRenderTarget != OldScale) || (Screen.fullScreen != wasFullScreen) || OVR_UnityGetModeChange());
+		
+        if (NeedsSetTexture)
+		{
+            if (CameraTexture[EyeId].GetNativeTexturePtr() == System.IntPtr.Zero)
+                return;             
+
+			OVR_SetTexture(EyeId, CameraTexture[EyeId].GetNativeTexturePtr(), CameraController.ScaleRenderTarget);
+
+			OldScale = CameraController.ScaleRenderTarget;
+			wasFullScreen = Screen.fullScreen;
+
+			if (PendingEyeCount == 0)
+				OVR_UnitySetModeChange(false);
+		
+            NeedsSetTexture = false;
+		}
+
+        if (PendingEyeCount == 0)
+			GL.IssuePluginEvent((int)EventType.EndFrame);
+	}
+
+	IEnumerator CallbackCoroutine()
+	{
+		while (true)
+		{
+            OVRDevice.HMD = Hmd.GetHmd();
+            yield return null;
+			OnCoroutine();
+		}
 	}
 	#endregion
 	
-	#region OVRCamera Functions
-
+	#region Internal Functions
 	/// <summary>
 	/// Sets the camera orientation.
 	/// </summary>
 	void SetCameraOrientation()
-	{
-		Quaternion q   = Quaternion.identity;
-		Quaternion qp  = Quaternion.identity;
-		Vector3    dir = Vector3.forward;		
-		
+	{	
 		// Main camera has a depth of 0, so it will be rendered first
-		if(camera.depth == 0.0f)
-		{			
-			// If desired, update parent transform y rotation here
-			// This is useful if we want to track the current location of
-			// of the head.
-			// TODO: Future support for x and z, and possibly change to a quaternion
-			// NOTE: This calculation is one frame behind 
+		if(camera == CameraController.CameraMain)
+		{
 			if(CameraController.TrackerRotatesY == true)
 			{
 				Vector3 a = camera.transform.rotation.eulerAngles;
@@ -190,52 +250,39 @@ public class OVRCamera : OVRComponent
 				a.z = 0;
 				transform.parent.transform.eulerAngles = a;
 			}
-			/*
-			else
-			{
-				// We will still rotate the CameraController in the y axis
-				// based on the fact that we have a Y rotation being passed 
-				// in from above that still needs to take place (this functionality
-				// may be better suited to be calculated one level up)
-				Vector3 a = Vector3.zero;
-				float y = 0.0f;
-				CameraController.GetYRotation(ref y);
-				a.y = y;
-				gameObject.transform.parent.transform.eulerAngles = a;
-			}
-			*/	
-			// Read shared data from CameraController	
-			if(CameraController != null)
-			{		
-				if(CameraController.EnableOrientation == true)
-				{
-					// Get camera orientation and position from vision
-					OVRDevice.GetCameraPositionOrientation(ref CameraPosition, ref CameraOrientation);
-//					Debug.LogWarning(System.String.Format("CP: {0:F2} {1:F2} {2:F2}",
-//								    CameraPosition.x, CameraPosition.y, CameraPosition.z));
-				}
-			}
-			
-			// This needs to go as close to reading Rift orientation inputs
-			OVRDevice.ProcessLatencyInputs();			
+
+			OVR_SampleEyePose(0);
+			OVR_SampleEyePose(1);
+
+			// Get camera orientation and position from vision
+			Quaternion camOrt = Quaternion.identity;
+			Vector3 camPos = Vector3.zero;
+			OVRDevice.GetCameraPositionOrientation(ref camPos, ref camOrt, CameraController.GetRenderTime());
+
+			if (CameraController.EnablePosition)
+				CameraPosition = camPos;
+
+			bool useOrt = (CameraController.EnableOrientation &&
+			               !(CameraController.TimeWarp && CameraController.FreezeTimeWarp));	
+			if(useOrt)
+				CameraOrientation = camOrt;
 		}
 		
 		// Calculate the rotation Y offset that is getting updated externally
 		// (i.e. like a controller rotation)
 		float yRotation = 0.0f;
 		CameraController.GetYRotation(ref yRotation);
-		qp = Quaternion.Euler(0.0f, yRotation, 0.0f);
-		dir = qp * Vector3.forward;
+		Quaternion qp = Quaternion.Euler(0.0f, yRotation, 0.0f);
+		Vector3 dir = qp * Vector3.forward;
 		qp.SetLookRotation(dir, Vector3.up);
 	
 		// Multiply the camera controllers offset orientation (allow follow of orientation offset)
 		Quaternion orientationOffset = Quaternion.identity;
 		CameraController.GetOrientationOffset(ref orientationOffset);
-		qp = orientationOffset * qp;
+		qp = orientationOffset * qp * CameraOrientationOffset;
 		
 		// Multiply in the current HeadQuat (q is now the latest best rotation)
-		if(CameraController != null)
-			q = qp * CameraOrientation;
+		Quaternion q = qp * CameraOrientation;
 		
 		// * * *
 		// Update camera rotation
@@ -243,8 +290,7 @@ public class OVRCamera : OVRComponent
 		
 		// * * *
 		// Update camera position (first add Offset to parent transform)
-		camera.transform.position = 
-		camera.transform.parent.transform.position + NeckPosition;
+		camera.transform.localPosition = NeckPosition;
 	
 		// Adjust neck by taking eye position and transforming through q
 		// Get final camera position as well as the clipping difference 
@@ -270,27 +316,11 @@ public class OVRCamera : OVRComponent
 		}
 
 		// Adjust camera position with offset/clipped cam location
-		camera.transform.position += qp * newCamPos;
+		camera.transform.localPosition += Quaternion.Inverse(camera.transform.parent.rotation) * qp * newCamPos;
 
-		// PGG: Call delegate function with new CameraOrientation / newCamPos here
-		// This location will be used to update the arrow pointer
-		// NOTE: Code below might not be needed. Please Look at OVRVisionGuide for potential
-		// location for arrow pointer
-/*
-		// This will set the orientation of the arrow
-		if (camera.depth == 2.0f)
-		{
-			// Set the location of the top node to follow the camera
-			OVRMainMenu.PointerSetPosition(camera.transform.position);
-			OVRMainMenu.PointerSetOrientation(camera.transform.rotation);
-			Quaternion foo = Quaternion.LookRotation(-CameraPosition);
-			OVRMainMenu.PointerRotatePointerGeometry(qp * foo);
-		}
-*/
-		// move eyes out by x (IPD)
 		Vector3 newEyePos = Vector3.zero;
 		newEyePos.x = EyePosition.x;
-		camera.transform.position += q * newEyePos;
+		camera.transform.localPosition += camera.transform.localRotation * newEyePos;
 	}
 
 	/// <summary>
@@ -302,12 +332,9 @@ public class OVRCamera : OVRComponent
 	{
 		outCam = inCam - CameraPositionOffset;
 	}
+	#endregion
 
-
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-
+	#region Public Functions
 	/// <summary>
 	/// Call this in CameraController to set up the ideal FOV as
 	/// defined by the SDK
@@ -315,7 +342,10 @@ public class OVRCamera : OVRComponent
 	/// <returns>The ideal FOV.</returns>
 	public float GetIdealVFOV()
 	{
-		return eyeMesh.GetIdealFOV().y;
+		int resH = 0; int resV = 0; float fovH = 0; float fovV = 0;
+		OVRDevice.GetImageInfo(ref resH, ref resV, ref fovH, ref fovV);
+
+		return fovV;
 	}
 
 	/// <summary>
@@ -324,8 +354,10 @@ public class OVRCamera : OVRComponent
 	/// <returns>The aspect ratio.</returns>
 	public float CalculateAspectRatio()
 	{
-		Vector2 fov = eyeMesh.GetIdealFOV();
-		return fov.x / fov.y;
+		int resH = 0; int resV = 0; float fovH = 0; float fovV = 0;
+		OVRDevice.GetImageInfo(ref resH, ref resV, ref fovH, ref fovV);
+
+        return (float)resH / (float)resV;
 	}
 
 	/// <summary>
@@ -334,71 +366,62 @@ public class OVRCamera : OVRComponent
 	/// <returns>The ideal resolution.</returns>
 	public void GetIdealResolution(ref int w, ref int h)
 	{
-		eyeMesh.GetIdealResolution(ref w, ref h);
+		float fovH = 0; float fovV = 0;
+		OVRDevice.GetImageInfo(ref w, ref h, ref fovH, ref fovV);
 	}
 
 	/// <summary>
-	/// UpdateDistortionMeshParams
-	/// Query the camera fielf of view and then set up the appropriate values
+	/// Creates the render texture.
 	/// </summary>
-	/// <param name="lc">Lc.</param>
-	/// <param name="rightEye">If set to <c>true</c> right eye.</param>
-	/// <param name="flipY">If set to <c>true</c> flip y.</param>
-	public void UpdateDistortionMeshParams (ref OVRLensCorrection lc, bool rightEye, bool flipY)
+	/// <param name="scale">Scale.</param>
+	public void CreateRenderTexture(int i, float scale)
 	{
-		float fovH = GetHorizontalFOV();
-		eyeMesh.SetFOV(fovH, camera.fieldOfView);
-		eyeMesh.UpdateParams(ref lc, rightEye, flipY);
-	}
-	
-	/// <summary>
-	/// We must calculate this to return back to mesh distortion
-	/// </summary>
-	/// <returns>The horizontal FO.</returns>
-	public float GetHorizontalFOV()
-	{
-		return camera.fieldOfView * camera.aspect;
+		// Set CameraTextureScale (increases the size of the texture we are rendering into
+		// for a better pixel match when post processing the image through lens distortion)
+		// If CameraTextureScale is not 1.0f, create a new texture and assign to target texture
+		// Otherwise, fall back to normal camera rendering
 
-//		float vFOVInRads =  camera.fieldOfView * Mathf.Deg2Rad;
-//		float hFOVInRads = 2 * Mathf.Atan( Mathf.Tan(vFOVInRads / 2) * camera.aspect);
-//		float hFOV = hFOVInRads * Mathf.Rad2Deg;
-//
-//		return hFOV;
-	}
+		if (CameraTexture[i] != null)
+			return;
 
-	///////////////////////////////////////////////////////////
-	// VISION FUNCTIONS
-	///////////////////////////////////////////////////////////
-	
+		int w = 0;
+		int h = 0;
+
+		GetIdealResolution(ref w, ref h);
+
+		w = (int)((float)w * scale);
+		h = (int)((float)h * scale);
+
+		if (CameraTexture[i] != null)
+			DestroyImmediate(CameraTexture[i]);
+			
+		CameraTexture[i] = new RenderTexture(w, h, 24, (camera.hdr) ? RenderTextureFormat.ARGBFloat : RenderTextureFormat.Default);
+		CameraTexture[i].antiAliasing = (QualitySettings.antiAliasing == 0) ? 1 : QualitySettings.antiAliasing;
+
+		CameraTexture[i].Create();
+	}
+	#endregion
+
+	#region Vision Functions
 	/// <summary>
 	/// Mainly to be used to reset camera position orientation
 	/// camOffset will move the center eye position to an optimal location
 	/// clampX/Y/Z will zero out the offset that is used (restricts offset in a given axis)
 	/// </summary>
-	/// <param name="camOffset">Cam offset.</param>
-	/// <param name="clampX">If set to <c>true</c> clamp x.</param>
-	/// <param name="clampY">If set to <c>true</c> clamp y.</param>
-	/// <param name="clampZ">If set to <c>true</c> clamp z.</param>
-	static public void ResetCameraPositionOrientation(ref Vector3 camOffset, 
-	                                                  bool clampX, bool clampY, bool clampZ)
+	/// <param name="posScale">Scale for positional change.</param>
+	/// <param name="posOffset">Positional offset.</param>
+	/// <param name="posOffset">Positional offset.</param>
+	/// <param name="posOffset">Positional offset.</param>
+	static public void ResetCameraPositionOrientation(Vector3 posScale, Vector3 posOffset, Vector3 ortScale, Vector3 ortOffset)
 	{
 		Vector3 camPos  = Vector3.zero;
 		Quaternion camO = Quaternion.identity;
-		OVRDevice.GetCameraPositionOrientation(ref camPos, ref camO);
-		
-		// Set position offset
-		CameraPositionOffset   = camPos;
-		
-		// restrict offset in the desired axis
-		if(clampX == true)
-			CameraPositionOffset.x   = 0.0f;
-		if(clampY == true)
-			CameraPositionOffset.y   = 0.0f;
-		if(clampZ == true)
-			CameraPositionOffset.z   = 0.0f;
-		
-		// Adjust for optimal offset from zero (for eye position from neck etc.)
-		CameraPositionOffset -= camOffset;
+		OVRDevice.GetCameraPositionOrientation(ref camPos, ref camO, OVRDevice.PredictionTime);
+
+		CameraPositionOffset = Vector3.Scale(camPos, posScale) - posOffset;
+
+		Vector3 euler = Quaternion.Inverse(camO).eulerAngles;
+		CameraOrientationOffset = Quaternion.Euler(Vector3.Scale(euler, ortScale) - ortOffset);
 	}
 	
 	/// <summary>
@@ -406,7 +429,7 @@ public class OVRCamera : OVRComponent
 	/// eye location
 	/// </summary>
 	/// <param name="offset">Offset.</param>
-	static public void SetCameraPositionOffset(ref Vector3 offset)
+	static public void SetCameraPositionOffset(Vector3 offset)
 	{
 		CameraPositionOffset = -offset;
 	}
@@ -417,7 +440,7 @@ public class OVRCamera : OVRComponent
 	/// <param name="obj">Object.</param>
 	static public void AddToLocalCameraSetList(ref OVRCameraGameObject obj)
 	{
-		CameraLocalSetList.Add (obj);
+		CameraLocalSetList.Add(obj);
 	}
 	
 	/// <summary>
@@ -426,7 +449,7 @@ public class OVRCamera : OVRComponent
 	/// <param name="obj">Object.</param>
 	static public void RemoveFromLocalCameraSetList(ref OVRCameraGameObject obj)
 	{
-		CameraLocalSetList.Remove (obj);
+		CameraLocalSetList.Remove(obj);
 	}
 	
 	/// <summary>
@@ -456,12 +479,9 @@ public class OVRCamera : OVRComponent
 	{
 		pos = CameraPosition - CameraPositionOffset;
 	}
-	
-	#endregion	
+	#endregion
 }
 
-//-------------------------------------------------------------------------------------
-// ***** OVRCameraGameObject
 
 /// <summary>
 /// OVR camera game object.
@@ -469,7 +489,7 @@ public class OVRCamera : OVRComponent
 /// </summary>
 public class OVRCameraGameObject
 {
-	public GameObject 		   CameraGameObject = null;
+	public GameObject          CameraGameObject = null;
 	public OVRCameraController CameraController = null;
 }
 

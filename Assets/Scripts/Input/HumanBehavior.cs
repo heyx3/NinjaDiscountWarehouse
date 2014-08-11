@@ -36,6 +36,7 @@ public class HumanBehavior : MonoBehaviour
 							 FaceTracker = null;
 	public Transform CameraTracker = null;
 
+	public event System.EventHandler OnNod, OnJerk;
 	private float timeSinceLastGesture = 0.0f;
 	private AudioSource src;
 	
@@ -199,6 +200,8 @@ public class HumanBehavior : MonoBehaviour
 						Levitators.Add(lev);
 						lev.Levitate();
 						newLevitations += 1;
+
+						if (OnNod != null) OnNod(this, new System.EventArgs());
 					}
 				}
 
@@ -221,6 +224,8 @@ public class HumanBehavior : MonoBehaviour
 
 				src.volume = AudioSources.Instance.ThrowNoiseVolume;
 				src.PlayOneShot(src.clip);
+
+				if (OnJerk != null) OnJerk(this, new System.EventArgs());
 			}
 		}
 	}

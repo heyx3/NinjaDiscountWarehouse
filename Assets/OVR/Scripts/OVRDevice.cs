@@ -3,7 +3,7 @@
 Filename    :   OVRDevice.cs
 Content     :   Interface for the Oculus Rift Device
 Created     :   February 14, 2013
-Authors     :   Peter Giokaris
+Authors     :   Peter Giokaris, David Borel
 
 Copyright   :   Copyright 2014 Oculus VR, Inc. All Rights reserved.
 
@@ -28,6 +28,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using OVR;
 
 //-------------------------------------------------------------------------------------
 // ***** OVRDevice
@@ -45,208 +46,92 @@ using System.Runtime.InteropServices;
 /// </summary>
 public class OVRDevice : MonoBehaviour 
 {
-	// Imported functions from 
-	// OVRPlugin.dll 	(PC)
-	// OVRPlugin.bundle (OSX)
-	// OVRPlugin.so 	(Linux, Android)
-	
-	// MessageList
-	[StructLayout(LayoutKind.Sequential)]
-	public struct MessageList
-	{
-		public byte isHMDSensorAttached;
-		public byte isHMDAttached;
-		public byte isLatencyTesterAttached;
-		
-		public MessageList(byte HMDSensor, byte HMD, byte LatencyTester)
-		{
-			isHMDSensorAttached = HMDSensor;
-			isHMDAttached = HMD;
-			isLatencyTesterAttached = LatencyTester;
-		}
-	}
+	/// <summary>
+	/// The current HMD's nominal refresh rate.
+	/// </summary>
+	public static float SimulationRate = 60f;
 
-	public const string strOvrLib = "OculusPlugin";
-
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_Initialize();
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_Update(ref MessageList messageList);	
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_Destroy();
-	// SENSOR FUNCTIONS
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_IsSensorPresent();
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_GetSensorOrientation(ref float w, ref float x, ref float y, ref float z);
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_GetSensorPredictedOrientation(ref float w, ref float x, ref float y, ref float z);
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_UseSensorPrediction(bool predictionOn);
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_GetSensorPredictionTime(ref float predictionTime);
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_SetSensorPredictionTime(float predictionTime);
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_EnableYawCorrection(float enable);
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_ResetSensorOrientation();	
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_GetAcceleration(ref float x, ref float y, ref float z);
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_GetAngularVelocity(ref float x, ref float y, ref float z);
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_GetMagnetometer(ref float x, ref float y, ref float z);
-	// CAMERA VISION FUNCTIONS	
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_IsCameraPresent();
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_IsCameraTracking();
-	[DllImport (strOvrLib)]
-	private static extern void OVR_ResetCameraOffset();
-	[DllImport (strOvrLib)]
-	private static extern void OVR_SetHeadModel(float x, float y, float z);
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_GetCameraPositionOrientation(ref float px, ref float py, ref float pz,
-									 							ref float ox, ref float oy, ref float oz, ref float ow);
-	[DllImport (strOvrLib)]
-	private static extern void OVR_SetVisionEnabled(bool on);		
-	// HMD FUNCTIONS
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_IsHMDPresent();
-	[DllImport (strOvrLib)]
-	private static extern void OVR_SetLowPersistanceMode(bool on); 
-	[DllImport (strOvrLib)]	
-	private static extern bool OVR_GetPlayerEyeHeight(ref float eyeHeight);
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_GetInterpupillaryDistance(ref float interpupillaryDistance);
-	// LATENCY TEST FUNCTIONS
-	[DllImport (strOvrLib)]
-    private static extern void OVR_ProcessLatencyInputs();
-	[DllImport (strOvrLib)]
-    private static extern bool OVR_DisplayLatencyScreenColor(ref byte r, ref byte g, ref byte b);
-	[DllImport (strOvrLib)]
-    private static extern System.IntPtr OVR_GetLatencyResultsString();
-	// MAGNETOMETER YAW-DRIFT CORRECTION FUNCTIONS
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_IsMagCalibrated();
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_EnableMagYawCorrection(bool enable);
-	[DllImport (strOvrLib)]
-	private static extern bool OVR_IsYawCorrectionEnabled();	
+	public static Hmd HMD;
 	
 	// PUBLIC
-	public float PredictionTime 								= 0.03f; // 30 ms
-	public bool  ResetTrackerOnLoad								= true;  // if off, tracker will not reset when new scene																 	 // is loaded
-	// STATIC
-	private static MessageList MsgList 							= new MessageList(0, 0, 0);
-	private static bool  OVRInit 								= false;
-		
-	// * * * * * * * * * * * * *
-
 	/// <summary>
-	/// Awake this instance.
+	/// Only used if prediction is on and timewarp is disabled (see OVRCameraController).
 	/// </summary>
-	void Awake () 
-	{	
-		// Init
-		OVRInit = OVR_Initialize();
-		if(OVRInit == false) return;
+	public static float PredictionTime 								= 0.03f; // 30 ms
+	// if off, tracker will not reset when new scene is loaded
+	public static bool  ResetTrackerOnLoad							= true;
 
-		// Set initial prediction time
-		SetPredictionTime(PredictionTime);
-	}
-   
-	/// <summary>
-	/// Start this instance.
-	/// (Note: make sure to always have a Start function for classes that have
-	/// editors attached to them)
-	/// </summary>
-	void Start()
+    // Records whether or not we're running on an unsupported platform
+    [HideInInspector]
+    public static bool SupportedPlatform;
+
+	#region MonoBehaviour Message Handlers
+	void Awake()
 	{
+		string[] args = System.Environment.GetCommandLineArgs();
+		for (int i = 0; i < args.Length; ++i)
+		{
+			if (args[i] == "-fullscreen")
+			{
+				Debug.Log("Going to Full-Screen");
+				Screen.fullScreen = true;
+			}
+			else if (args[i] == "-window")
+			{
+				Debug.Log("Going to Window");
+				Screen.fullScreen = false;
+			}
+		}
+
+        // Detect whether this platform is a supported platform
+        RuntimePlatform currPlatform = Application.platform;
+        SupportedPlatform |= currPlatform == RuntimePlatform.Android;
+        SupportedPlatform |= currPlatform == RuntimePlatform.LinuxPlayer;
+        SupportedPlatform |= currPlatform == RuntimePlatform.OSXEditor;
+        SupportedPlatform |= currPlatform == RuntimePlatform.OSXPlayer;
+        SupportedPlatform |= currPlatform == RuntimePlatform.WindowsEditor;
+        SupportedPlatform |= currPlatform == RuntimePlatform.WindowsPlayer;
+        if (!SupportedPlatform)
+        {
+            Debug.LogWarning("This platform is unsupported");
+            return;
+        }
+
+		if (HMD != null)
+			return;
+
+        HMD = Hmd.GetHmd();
+
+		//HACK: Forcing LP off until service initializes it properly.
+		SetLowPersistenceMode(true);
 	}
-	
-	/// <summary>
-	/// We can detect if our devices have been plugged or unplugged, as well as
-	/// run things that need to be updated in our game thread
-	/// </summary>
+
 	void Update()
-	{	
-		MessageList oldMsgList = MsgList;
-		OVR_Update(ref MsgList);
-		
-		// HMD SENSOR
-		if((MsgList.isHMDSensorAttached != 0) && 
-		   (oldMsgList.isHMDSensorAttached == 0))
-		{
-			OVRMessenger.Broadcast<OVRMainMenu.Device, bool>("Sensor_Attached", OVRMainMenu.Device.HMDSensor, true); 
-			//Debug.Log("HMD SENSOR ATTACHED");
-		}
-		else if((MsgList.isHMDSensorAttached == 0) && 
-		   (oldMsgList.isHMDSensorAttached != 0))
-		{
-			OVRMessenger.Broadcast<OVRMainMenu.Device, bool>("Sensor_Attached", OVRMainMenu.Device.HMDSensor, false);
-			//Debug.Log("HMD SENSOR DETACHED");
-		}
-
-		// HMD
-		if((MsgList.isHMDAttached != 0) && 
-		   (oldMsgList.isHMDAttached == 0))
-		{
-			OVRMessenger.Broadcast<OVRMainMenu.Device, bool>("Sensor_Attached", OVRMainMenu.Device.HMD, true); 
-			//Debug.Log("HMD ATTACHED");
-		}
-		else if((MsgList.isHMDAttached == 0) && 
-		   (oldMsgList.isHMDAttached != 0))
-		{
-			OVRMessenger.Broadcast<OVRMainMenu.Device, bool>("Sensor_Attached", OVRMainMenu.Device.HMD, false); 
-			//Debug.Log("HMD DETACHED");
-		}
-
-		// LATENCY TESTER
-		if((MsgList.isLatencyTesterAttached != 0) && 
-		   (oldMsgList.isLatencyTesterAttached == 0))
-		{
-			OVRMessenger.Broadcast<OVRMainMenu.Device, bool>("Sensor_Attached", OVRMainMenu.Device.LatencyTester, true); 
-			//Debug.Log("LATENCY TESTER ATTACHED");
-		}
-		else if((MsgList.isLatencyTesterAttached == 0) && 
-		   (oldMsgList.isLatencyTesterAttached != 0))
-		{
-			OVRMessenger.Broadcast<OVRMainMenu.Device, bool>("Sensor_Attached", OVRMainMenu.Device.LatencyTester, false); 
-			//Debug.Log("LATENCY TESTER DETACHED");
-		}
-
-		// Update prediction if being changed from outside
-		PredictionTime = GetPredictionTime();
-	}
-		
-	/// <summary>
-	/// Raises the destroy event.
-	/// </summary>
-	void OnDestroy()
 	{
-		// We may want to turn this off so that values are maintained between level / scene loads
-		if(ResetTrackerOnLoad == true)
-		{
-			OVR_Destroy();
-			OVRInit = false;
-		}
+		if (HMD != null && Input.anyKeyDown && HMD.GetHSWDisplayState().Displayed)
+			HMD.DismissHSWDisplay();
 	}
-	
-	
+	#endregion
+
+#if false
+	/// <summary>
+	/// Destroy this instance.
+	/// </summary>
+    void OnDestroy()
+    {
+        // We may want to turn this off so that values are maintained between level / scene loads
+        if (!ResetTrackerOnLoad || HMD == null)
+            return;
+
+        HMD.Destroy();
+        Hmd.Shutdown();
+        HMD = null;
+    }
+#endif
+
 	// * * * * * * * * * * * *
 	// PUBLIC FUNCTIONS
 	// * * * * * * * * * * * *
-	
-	/// <summary>
-	/// Inited - Check to see if system has been initialized
-	/// </summary>
-	/// <returns><c>true</c> if is initialized; otherwise, <c>false</c>.</returns>
-	public static bool IsInitialized()
-	{
-		return OVRInit;
-	}
 	
 	/// <summary>
 	/// Determines if is HMD present.
@@ -254,7 +139,12 @@ public class OVRDevice : MonoBehaviour
 	/// <returns><c>true</c> if is HMD present; otherwise, <c>false</c>.</returns>
 	public static bool IsHMDPresent()
 	{
-		return OVR_IsHMDPresent();
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
+		ovrTrackingState ss = HMD.GetTrackingState();
+		
+		return (ss.StatusFlags | (uint)ovrStatusBits.ovrStatus_HmdConnected) != 0;
 	}
 
 	/// <summary>
@@ -263,57 +153,26 @@ public class OVRDevice : MonoBehaviour
 	/// <returns><c>true</c> if is sensor present; otherwise, <c>false</c>.</returns>
 	public static bool IsSensorPresent()
 	{
-		return OVR_IsSensorPresent();
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
+		ovrHmdDesc desc = HMD.GetDesc();
+
+		return (desc.HmdCaps & (uint)ovrHmdCaps.ovrHmdCap_Present) != 0;
 	}
 
-	/// <summary>
-	/// Gets the orientation.
-	/// </summary>
-	/// <returns><c>true</c>, if orientation was gotten, <c>false</c> otherwise.</returns>
-	/// <param name="q">Q.</param>
-	public static bool GetOrientation(ref Quaternion q)
-	{
-		float w = 0, x = 0, y = 0, z = 0;
-
-        if (OVR_GetSensorOrientation(ref w, ref x, ref y, ref z) == true)
-		{
-			q.w = w; q.x = x; q.y = y; q.z = z;	
-			OrientSensor(ref q);
-						
-			return true;
-		}
-		
-		return false;
-	}
-	
-	/// <summary>
-	/// Gets the predicted orientation.
-	/// </summary>
-	/// <returns><c>true</c>, if predicted orientation was gotten, <c>false</c> otherwise.</returns>
-	/// <param name="q">Q.</param>
-	public static bool GetPredictedOrientation(ref Quaternion q)
-	{
-		float w = 0, x = 0, y = 0, z = 0;
-
-        if (OVR_GetSensorPredictedOrientation(ref w, ref x, ref y, ref z) == true)
-		{
-			q.w = w; q.x = x; q.y = y; q.z = z;	
-			OrientSensor(ref q);
-	
-			return true;
-		}
-		
-		return false;
-
-	}		
-	
 	/// <summary>
 	/// Resets the orientation.
 	/// </summary>
 	/// <returns><c>true</c>, if orientation was reset, <c>false</c> otherwise.</returns>
 	public static bool ResetOrientation()
 	{
-        return OVR_ResetSensorOrientation();
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
+		HMD.RecenterPose();
+
+		return true;
 	}
 	
 	// Latest absolute sensor readings (note: in right-hand co-ordinates)
@@ -327,7 +186,15 @@ public class OVRDevice : MonoBehaviour
 	/// <param name="z">The z coordinate.</param>
 	public static bool GetAcceleration(ref float x, ref float y, ref float z)
 	{
-        return OVR_GetAcceleration(ref x, ref y, ref z);
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
+		ovrTrackingState ss = HMD.GetTrackingState();
+		x = ss.HeadPose.LinearAcceleration.x;
+		y = ss.HeadPose.LinearAcceleration.y;
+		z = ss.HeadPose.LinearAcceleration.z;
+		
+		return true;
 	}
 
 	/// <summary>
@@ -339,49 +206,15 @@ public class OVRDevice : MonoBehaviour
 	/// <param name="z">The z coordinate.</param>
 	public static bool GetAngularVelocity(ref float x, ref float y, ref float z)
 	{
-        return OVR_GetAngularVelocity(ref x, ref y, ref z);
-	}
-	
-	/// <summary>
-	/// Gets the magnetometer.
-	/// </summary>
-	/// <returns><c>true</c>, if magnetometer was gotten, <c>false</c> otherwise.</returns>
-	/// <param name="x">The x coordinate.</param>
-	/// <param name="y">The y coordinate.</param>
-	/// <param name="z">The z coordinate.</param>
-	public static bool GetMagnetometer(ref float x, ref float y, ref float z)
-	{
-        return OVR_GetMagnetometer(ref x, ref y, ref z);
-	}
+        if (HMD == null || !SupportedPlatform)
+            return false;
 
-	/// <summary>
-	/// Uses the prediction.
-	/// </summary>
-	/// <param name="on">If set to <c>true</c> on.</param>
-	public static void UsePrediction(bool on)
-	{
-		OVR_UseSensorPrediction(on);
-	}
+		ovrTrackingState ss = HMD.GetTrackingState();
+		x = ss.HeadPose.AngularVelocity.x;
+		y = ss.HeadPose.AngularVelocity.y;
+		z = ss.HeadPose.AngularVelocity.z;
 
-	/// <summary>
-	/// Gets the prediction time.
-	/// </summary>
-	/// <returns>The prediction time.</returns>
-	public static float GetPredictionTime()
-	{		
-		float pt = 0.0f;
-		OVR_GetSensorPredictionTime(ref pt);
-		return pt;
-	}
-
-	/// <summary>
-	/// Sets the prediction time.
-	/// </summary>
-	/// <returns><c>true</c>, if prediction time was set, <c>false</c> otherwise.</returns>
-	/// <param name="predictionTime">Prediction time.</param>
-	public static bool SetPredictionTime(float predictionTime)
-	{
-		return OVR_SetSensorPredictionTime(predictionTime);
+		return true;
 	}
 					
 	/// <summary>
@@ -391,70 +224,12 @@ public class OVRDevice : MonoBehaviour
 	/// <param name="IPD">IP.</param>
 	public static bool GetIPD(ref float IPD)
 	{
-		if(!OVRInit) return false;
+        if (HMD == null || !SupportedPlatform)
+            return false;
 
-		OVR_GetInterpupillaryDistance(ref IPD);
+		IPD = HMD.GetFloat(Hmd.OVR_KEY_IPD, Hmd.OVR_DEFAULT_IPD);
 		
 		return true;
-	}
-	
-	/// <summary>
-	/// Processes the latency inputs.
-	/// </summary>
-    public static void ProcessLatencyInputs()
-	{
-        OVR_ProcessLatencyInputs();
-	}
-	
-	/// <summary>
-	/// Displays the color of the latency screen.
-	/// </summary>
-	/// <returns><c>true</c>, if latency screen color was displayed, <c>false</c> otherwise.</returns>
-	/// <param name="r">The red component.</param>
-	/// <param name="g">The green component.</param>
-	/// <param name="b">The blue component.</param>
-    public static bool DisplayLatencyScreenColor(ref byte r, ref byte g, ref byte b)
-	{
-        return OVR_DisplayLatencyScreenColor(ref r, ref g, ref b);
-	}
-	
-	/// <summary>
-	/// Gets the latency results string.
-	/// </summary>
-	/// <returns>The latency results string.</returns>
-    public static System.IntPtr GetLatencyResultsString()
-	{
-        return OVR_GetLatencyResultsString();
-	}
-
-	// MAG YAW-DRIFT CORRECTION FUNCTIONS
-
-	/// <summary>
-	/// Determines if is mag calibrated.
-	/// </summary>
-	/// <returns><c>true</c> if is mag calibrated; otherwise, <c>false</c>.</returns>
-	public static bool IsMagCalibrated()
-	{
-		return OVR_IsMagCalibrated();
-	}
-	
-	/// <summary>
-	/// Enables the mag yaw correction.
-	/// </summary>
-	/// <returns><c>true</c>, if mag yaw correction was enabled, <c>false</c> otherwise.</returns>
-	/// <param name="enable">If set to <c>true</c> enable.</param>
-	public static bool EnableMagYawCorrection(bool enable)
-	{
-		return OVR_EnableMagYawCorrection(enable);
-	}
-	
-	/// <summary>
-	/// Determines if is yaw correction enabled.
-	/// </summary>
-	/// <returns><c>true</c> if is yaw correction enabled; otherwise, <c>false</c>.</returns>
-	public static bool IsYawCorrectionEnabled()
-	{
-		return OVR_IsYawCorrectionEnabled();
 	}
 
 	/// <summary>
@@ -483,7 +258,12 @@ public class OVRDevice : MonoBehaviour
 	/// <param name="eyeHeight">Eye height.</param>
 	public static bool GetPlayerEyeHeight(ref float eyeHeight)
 	{
-		return OVR_GetPlayerEyeHeight(ref eyeHeight);
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
+		eyeHeight = HMD.GetFloat(Hmd.OVR_KEY_EYE_HEIGHT, Hmd.OVR_DEFAULT_PLAYER_HEIGHT);
+
+		return true;
 	}
 	
 	// CAMERA VISION FUNCTIONS
@@ -493,8 +273,13 @@ public class OVRDevice : MonoBehaviour
 	/// </summary>
 	/// <returns><c>true</c> if is camera present; otherwise, <c>false</c>.</returns>
 	public static bool IsCameraPresent()
-	{	
-		return OVR_IsCameraPresent();
+	{
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
+		ovrTrackingState ss = HMD.GetTrackingState();
+		
+		return (ss.StatusFlags | (uint)ovrStatusBits.ovrStatus_PositionConnected) != 0;
 	}
 	
 	/// <summary>
@@ -503,27 +288,12 @@ public class OVRDevice : MonoBehaviour
 	/// <returns><c>true</c> if is camera tracking; otherwise, <c>false</c>.</returns>
 	public static bool IsCameraTracking()
 	{
-		return OVR_IsCameraTracking ();
-	}
-	
-	/// <summary>
-	/// Resets the camera offsdet.
-	/// </summary>
-	public static void ResetCameraOffsdet()
-	{	
-		OVR_ResetCameraOffset();
-	}
-	
-	/// <summary>
-	/// Sets the head model.
-	/// </summary>
-	/// <param name="x">The x coordinate.</param>
-	/// <param name="y">The y coordinate.</param>
-	/// <param name="z">The z coordinate.</param>
-	public static void SetHeadModel(float x, float y, float z)
-	{
-		// make sure to negate z, so that the position is right-handed CS
-		OVR_SetHeadModel(x,y,-z);
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
+		ovrTrackingState ss = HMD.GetTrackingState();
+		
+		return (ss.StatusFlags | (uint)ovrStatusBits.ovrStatus_PositionTracked) != 0;
 	}
 	
 	/// <summary>
@@ -533,18 +303,52 @@ public class OVRDevice : MonoBehaviour
 	/// <param name="p">P.</param>
 	/// <param name="o">O.</param>
 	public static bool 
-	GetCameraPositionOrientation(ref Vector3 p, ref Quaternion o)
+	GetCameraPositionOrientation(ref Vector3 p, ref Quaternion o, double predictionTime = 0f)
 	{
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
 		float px = 0, py = 0, pz = 0, ow = 0, ox = 0, oy = 0, oz = 0;
+
+		double abs_time_plus_pred = Hmd.GetTimeInSeconds() + predictionTime;
+
+		ovrTrackingState ss = HMD.GetTrackingState(abs_time_plus_pred);
 		
-		bool result = OVR_GetCameraPositionOrientation(ref  px,ref  py, ref  pz, ref  ox, ref  oy, ref  oz, ref  ow);
+		px = ss.HeadPose.ThePose.Position.x;
+		py = ss.HeadPose.ThePose.Position.y;
+		pz = ss.HeadPose.ThePose.Position.z;
+		
+		ox = ss.HeadPose.ThePose.Orientation.x;
+		oy = ss.HeadPose.ThePose.Orientation.y;
+		oz = ss.HeadPose.ThePose.Orientation.z;
+		ow = ss.HeadPose.ThePose.Orientation.w;
 		
 		p.x = px; p.y = py; p.z = -pz;
 		o.w = ow; o.x = ox; o.y = oy; o.z = oz;
 
 		// Convert to Left hand CS
 		OrientSensor(ref o);
-		return result;
+		
+		return true;
+	}
+
+	/// <summary>
+	/// Gets the camera projection matrix.
+	/// </summary>
+	/// <returns><c>true</c>, if camera projection matrix was gotten, <c>false</c> otherwise.</returns>
+	/// <param name="eyeId">Eye Id - Left = 0, Right = 1.</param>
+	/// <param name="nearClip">Near Clip Plane of the camera.</param>
+	/// <param name="farClip">Far Clip Plane of the camera.</param>
+	/// <param name="mat">The generated camera projection matrix.</param>
+	public static bool GetCameraProjection(int eyeId, float nearClip, float farClip, ref Matrix4x4 mat)
+	{
+        if (HMD == null || !SupportedPlatform)
+            return false;
+
+		ovrFovPort fov = HMD.GetDesc().DefaultEyeFov[eyeId];
+		mat = Hmd.GetProjection(fov, nearClip, farClip, true).ToMatrix4x4();
+		
+		return true;
 	}
 
 	/// <summary>
@@ -553,15 +357,118 @@ public class OVRDevice : MonoBehaviour
 	/// <param name="on">If set to <c>true</c> on.</param>
 	public static void SetVisionEnabled(bool on)
 	{
-		OVR_SetVisionEnabled (on);
+        if (HMD == null || !SupportedPlatform)
+            return;
+
+		uint trackingCaps = (uint)ovrTrackingCaps.ovrTrackingCap_Orientation | (uint)ovrTrackingCaps.ovrTrackingCap_MagYawCorrection;
+
+		if (on)
+			trackingCaps |= (uint)ovrTrackingCaps.ovrTrackingCap_Position;
+		
+		HMD.RecenterPose();
+		HMD.ConfigureTracking(trackingCaps, 0);
 	}
 	
 	/// <summary>
-	/// Sets the low persistance mode.
+	/// Sets the low Persistence mode.
 	/// </summary>
 	/// <param name="on">If set to <c>true</c> on.</param>
-	public static void SetLowPersistanceMode(bool on)
+	public static void SetLowPersistenceMode(bool on)
 	{
-		OVR_SetLowPersistanceMode(on);
+        if (HMD == null || !SupportedPlatform)
+            return; 
+
+		uint caps = HMD.GetEnabledCaps();
+		
+		if(on)
+			caps |= (uint)ovrHmdCaps.ovrHmdCap_LowPersistence;
+		else
+			caps &= ~(uint)ovrHmdCaps.ovrHmdCap_LowPersistence;
+		
+		HMD.SetEnabledCaps(caps);
+	}
+
+	/// <summary>
+	/// Gets the FOV and resolution.
+	/// </summary>
+	public static void GetImageInfo(ref int resH, ref int resV, ref float fovH, ref float fovV)
+	{
+		// Always set to safe values :)
+		resH = 1280;
+		resV = 800;
+		fovH = fovV = 90.0f;
+		
+		float desiredPixelDensity = 1.0f;
+
+        if (HMD == null || !SupportedPlatform)
+            return;
+
+		ovrHmdDesc desc = HMD.GetDesc();
+		
+		// Configure Stereo settings. Default pixel density is 1.0f.
+		ovrSizei tex0Size = HMD.GetFovTextureSize(ovrEyeType.ovrEye_Left, desc.DefaultEyeFov[0], desiredPixelDensity);
+		//ovrSizei tex1Size = HMD.GetFovTextureSize(ovrEyeType.ovrEye_Right, desc.DefaultEyeFov[1], desiredPixelDensity);
+		
+		//TODO: account for differences between eyes.
+		resH = tex0Size.w;
+		resV = tex0Size.h;
+		fovH = Mathf.Rad2Deg * ( Mathf.Atan(desc.DefaultEyeFov[0].LeftTan) + Mathf.Atan(desc.DefaultEyeFov[0].RightTan) );
+		fovV = Mathf.Rad2Deg * ( Mathf.Atan(desc.DefaultEyeFov[0].UpTan)   + Mathf.Atan(desc.DefaultEyeFov[0].DownTan)  );
+	}
+
+    /// <summary>
+    /// Get resolution of eye texture
+    /// </summary>
+    /// <param name="w">Width</param>
+    /// <param name="h">Height</param>
+    public static void GetResolutionEyeTexture(ref int w, ref int h)
+    {
+        if (HMD == null || !SupportedPlatform)
+		    return;
+        
+        ovrHmdDesc desc = HMD.GetDesc();
+        ovrFovPort[] eyeFov = new ovrFovPort[2];
+
+	    eyeFov[0] = desc.DefaultEyeFov[0];
+	    eyeFov[1] = desc.DefaultEyeFov[1];
+
+        ovrSizei recommenedTex0Size = HMD.GetFovTextureSize(ovrEyeType.ovrEye_Left, desc.DefaultEyeFov[0], 1.0f);
+        ovrSizei recommenedTex1Size = HMD.GetFovTextureSize(ovrEyeType.ovrEye_Left, desc.DefaultEyeFov[1], 1.0f);
+
+	    w = recommenedTex0Size.w + recommenedTex1Size.w;
+	    h = (recommenedTex0Size.h + recommenedTex1Size.h)/2;
+    }
+
+    /// <summary>
+    /// Get latency values
+    /// </summary>
+    /// <param name="Ren">Ren</param>
+    /// <param name="TWrp">TWrp</param>
+    /// <param name="PostPresent">PostPresent</param>
+    public static void GetLatencyValues(ref float Ren, ref float TWrp, ref float PostPresent)
+    {
+        if (HMD == null || !SupportedPlatform)
+            return;
+
+        float[] values = { 0.0f, 0.0f, 0.0f };
+        float[] latencies = HMD.GetFloatArray("DK2Latency", values);
+        Ren = latencies[0];
+        TWrp = latencies[1];
+        PostPresent = latencies[2];
+    }   
+
+	/// <summary>
+	/// Gets the time (relative to now) at which the given frame will
+	/// show up on the screen, based on prediction.
+	/// </summary>
+	/// <returns>The scanout time.</returns>
+	/// <param name="frameNumber">Frame number.</param>
+	public static double GetScanoutTime(int frameNumber)
+	{
+        if (HMD == null || !SupportedPlatform)
+			return 0d;
+
+		ovrFrameTiming frameTiming = HMD.GetFrameTiming((uint)frameNumber);
+		return frameTiming.ScanoutMidpointSeconds - Hmd.GetTimeInSeconds();
 	}
 }

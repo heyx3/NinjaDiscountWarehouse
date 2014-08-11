@@ -12,7 +12,6 @@ GameObject:
   - 124: {fileID: 12400002}
   - 81: {fileID: 8100000}
   - 114: {fileID: 11400016}
-  - 114: {fileID: 11400018}
   m_Layer: 0
   m_Name: CameraRight
   m_TagString: MainCamera
@@ -31,7 +30,6 @@ GameObject:
   - 20: {fileID: 2000002}
   - 124: {fileID: 12400000}
   - 114: {fileID: 11400006}
-  - 114: {fileID: 11400014}
   m_Layer: 0
   m_Name: CameraLeft
   m_TagString: MainCamera
@@ -49,8 +47,6 @@ GameObject:
   - 4: {fileID: 400008}
   - 114: {fileID: 11400020}
   - 114: {fileID: 11400004}
-  - 20: {fileID: 2000000}
-  - 114: {fileID: 11400000}
   m_Layer: 8
   m_Name: OVRCameraController
   m_TagString: Untagged
@@ -84,7 +80,7 @@ GameObject:
   - 143: {fileID: 14300000}
   - 114: {fileID: 11400008}
   - 114: {fileID: 11400010}
-  - 114: {fileID: 11400012}
+  - 114: {fileID: 11400000}
   m_Layer: 0
   m_Name: OVRPlayerController
   m_TagString: Untagged
@@ -103,6 +99,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 400008}
+  m_RootOrder: 0
 --- !u!4 &400002
 Transform:
   m_ObjectHideFlags: 1
@@ -114,6 +111,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 400006}
+  m_RootOrder: 0
 --- !u!4 &400004
 Transform:
   m_ObjectHideFlags: 1
@@ -125,19 +123,21 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 400008}
+  m_RootOrder: 1
 --- !u!4 &400006
 Transform:
   m_ObjectHideFlags: 1
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 100008}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0, y: .964049041, z: 0, w: -.265724421}
+  m_LocalPosition: {x: 3.98164845, y: 1.41190863, z: 20.6666603}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 400002}
   - {fileID: 400008}
   m_Father: {fileID: 0}
+  m_RootOrder: 0
 --- !u!4 &400008
 Transform:
   m_ObjectHideFlags: 1
@@ -151,35 +151,7 @@ Transform:
   - {fileID: 400000}
   - {fileID: 400004}
   m_Father: {fileID: 400006}
---- !u!20 &2000000
-Camera:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 100004}
-  m_Enabled: 1
-  serializedVersion: 2
-  m_ClearFlags: 1
-  m_BackGroundColor: {r: .192156866, g: .301960796, b: .474509805, a: .0196078438}
-  m_NormalizedViewPortRect:
-    serializedVersion: 2
-    x: 0
-    y: 0
-    width: 1
-    height: 1
-  near clip plane: .300000012
-  far clip plane: 1000
-  field of view: 60
-  orthographic: 0
-  orthographic size: 5
-  m_Depth: 0
-  m_CullingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_RenderingPath: -1
-  m_TargetTexture: {fileID: 0}
-  m_HDR: 0
-  m_OcclusionCulling: 1
+  m_RootOrder: 1
 --- !u!20 &2000002
 Camera:
   m_ObjectHideFlags: 1
@@ -201,14 +173,17 @@ Camera:
   field of view: 90
   orthographic: 0
   orthographic size: 100
-  m_Depth: 1
+  m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
   m_HDR: 0
   m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: .0219999999
 --- !u!20 &2000004
 Camera:
   m_ObjectHideFlags: 1
@@ -230,14 +205,17 @@ Camera:
   field of view: 90
   orthographic: 0
   orthographic size: 100
-  m_Depth: 0
+  m_Depth: 1
   m_CullingMask:
     serializedVersion: 2
     m_Bits: 4294967295
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
+  m_TargetDisplay: 0
   m_HDR: 0
   m_OcclusionCulling: 1
+  m_StereoConvergence: 10
+  m_StereoSeparation: .0219999999
 --- !u!81 &8100000
 AudioListener:
   m_ObjectHideFlags: 1
@@ -250,14 +228,29 @@ MonoBehaviour:
   m_ObjectHideFlags: 1
   m_PrefabParentObject: {fileID: 0}
   m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 100004}
+  m_GameObject: {fileID: 100008}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a9e4dee373494c741b88a199d7ed32b4, type: 3}
+  m_Script: {fileID: 11500000, guid: e437ffb7de5844b42b64f89763daf449, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  CameraLeft: {fileID: 0}
-  CameraRight: {fileID: 0}
+  FadeInTime: 2
+  FadeInTexture: {fileID: 2800000, guid: a025c23fceb7d4966b603419f551ce99, type: 3}
+  FontReplace: {fileID: 0}
+  MenuKey: 32
+  QuitKey: 27
+  SceneNames:
+  - Hit 'return' to reset..
+  Scenes:
+  - VRDemo_Tuscany
+  IPDIncrement: .000250000012
+  PredictionIncrement: .00100000005
+  FOVIncrement: .200000003
+  HeightIncrement: .00999999978
+  SpeedRotationIncrement: .0500000007
+  UsingNewGUI: 0
+  LayerName: Default
+  CrosshairImage: {fileID: 2800000, guid: 64ce76f827a71b44da62c30c0b506fd2, type: 3}
 --- !u!114 &11400004
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -269,8 +262,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e933e81d3c20c74ea6fdc708a67e3a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  PredictionTime: .0299999993
-  ResetTrackerOnLoad: 1
 --- !u!114 &11400006
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -307,61 +298,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0950df82e7936c84983497630bde5b54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Acceleration: .0500000007
-  Damping: .200000003
+  Acceleration: .100000001
+  Damping: .300000012
   BackAndSideDampen: .5
   JumpForce: .300000012
   RotationAmount: 1.5
+  RotationRatchet: 45
   GravityModifier: .379000008
---- !u!114 &11400012
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 100008}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e437ffb7de5844b42b64f89763daf449, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  FadeInTime: 2
-  FadeInTexture: {fileID: 2800000, guid: a025c23fceb7d4966b603419f551ce99, type: 3}
-  FontReplace: {fileID: 0}
-  SceneNames:
-  - Hit 'return' to reset..
-  Scenes:
-  - VRDemo_Tuscany
-  IPDIncrement: .000250000012
-  PredictionIncrement: .00100000005
-  FOVIncrement: .200000003
-  HeightIncrement: .00999999978
-  SpeedRotationIncrement: .0500000007
-  LayerName: Default
-  CrosshairImage: {fileID: 2800000, guid: 64ce76f827a71b44da62c30c0b506fd2, type: 3}
---- !u!114 &11400014
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 100002}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5be85f8438ca3145aac56e800a217cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  material: {fileID: 2100000, guid: fa77fe97b0170804ab2b486d1cf3042f, type: 2}
-  _Center: {x: .5, y: .5}
-  _ScaleIn: {x: 1, y: 1}
-  _Scale: {x: 1, y: 1}
-  _HmdWarpParam: {x: 1, y: 0, z: 0, w: 0}
-  _ChromaticAberration: {x: .995999992, y: .991999984, z: 1.01400006, w: 1.01400006}
-  _DMScale: {x: 0, y: 0}
-  _DMOffset: {x: 0, y: 0}
-  material_CA: {fileID: 2100000, guid: 700ec7db7ac6ff24f9f4a3d4cd157910, type: 2}
-  material_MeshDistort: {fileID: 2100000, guid: 88b24f42a9d4561489e930a935932e7c,
-    type: 2}
-  material_MeshDistort_CA: {fileID: 2100000, guid: 0a1b4ff444b43964fa1d98bfb4523d81,
-    type: 2}
 --- !u!114 &11400016
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -376,30 +319,6 @@ MonoBehaviour:
   NeckPosition: {x: 0, y: .600000024, z: 0}
   EyePosition: {x: 0, y: .150000006, z: .0900000036}
   RightEye: 1
---- !u!114 &11400018
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 100000}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5be85f8438ca3145aac56e800a217cf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  material: {fileID: 2100000, guid: fa77fe97b0170804ab2b486d1cf3042f, type: 2}
-  _Center: {x: .5, y: .5}
-  _ScaleIn: {x: 1, y: 1}
-  _Scale: {x: 1, y: 1}
-  _HmdWarpParam: {x: 1, y: 0, z: 0, w: 0}
-  _ChromaticAberration: {x: .995999992, y: .991999984, z: 1.01400006, w: 1.01400006}
-  _DMScale: {x: 0, y: 0}
-  _DMOffset: {x: 0, y: 0}
-  material_CA: {fileID: 2100000, guid: 700ec7db7ac6ff24f9f4a3d4cd157910, type: 2}
-  material_MeshDistort: {fileID: 2100000, guid: 88b24f42a9d4561489e930a935932e7c,
-    type: 2}
-  material_MeshDistort_CA: {fileID: 2100000, guid: 0a1b4ff444b43964fa1d98bfb4523d81,
-    type: 2}
 --- !u!114 &11400020
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -413,21 +332,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ipd: .064000003
   verticalFOV: 90
+  CameraTextureScale: 1
+  scaleRenderTarget: 1
   CameraRootPosition: {x: 0, y: 1, z: 0}
   NeckPosition: {x: 0, y: 0, z: 0}
-  EyeCenterPosition: {x: 0, y: .150000006, z: .0900000036}
   UsePlayerEyeHeight: 1
   FollowOrientation: {fileID: 0}
   TrackerRotatesY: 1
   EnableOrientation: 1
+  EnablePosition: 1
   PredictionOn: 1
-  CallInPreRender: 0
-  CameraTextureScale: 1.5
-  WireMode: 0
-  LensCorrection: 1
-  Chromatic: 1
-  FlipCorrectionInY: 0
-  ShowDistortionWire: 0
+  timeWarp: 1
+  FreezeTimeWarp: 0
   backgroundColor: {r: 0, g: 0, b: 0, a: 1}
   nearClipPlane: .150000006
   farClipPlane: 1000

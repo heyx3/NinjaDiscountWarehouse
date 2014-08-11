@@ -12,6 +12,7 @@ public class ConveyorBeltObject : MonoBehaviour
 
 	public float RespawnRadius = 100.0f;
 	public float RespawnMaxSpeed = 0.5f;
+	public bool RespawnOnStart = true;
 
 	private static ConveyorBeltObject spawningObject;
 	private bool isWaitingToSpawn;
@@ -32,16 +33,21 @@ public class ConveyorBeltObject : MonoBehaviour
 			PathStarts = GameObject.FindObjectsOfType<ConveyorBeltStartNode>().Select(cbsn => cbsn.GetComponent<PathNode>()).ToArray();
 		}
 
-		isWaitingToSpawn = true;
 		spawningObject = null;
+
+		if (RespawnOnStart)
+		{
+			isWaitingToSpawn = true;
+		}
+		else
+		{
+			isWaitingToSpawn = false;
+		}
 	}
 
 
 	void Start()
 	{
-		rgd.isKinematic = true;
-		lvt.enabled = false;
-
 		pf.OnPathEnd += (s, e) =>
 			{
 				pf.MovingBackwards = false;
@@ -51,6 +57,17 @@ public class ConveyorBeltObject : MonoBehaviour
 			};
 
 		pf.enabled = false;
+
+		if (RespawnOnStart)
+		{
+			rgd.isKinematic = true;
+			lvt.enabled = false;
+		}
+		else
+		{
+			rgd.isKinematic = false;
+			lvt.enabled = true;
+		}
 	}
 
 	private void Respawn(int index)

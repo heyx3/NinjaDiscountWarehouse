@@ -38,27 +38,13 @@ using System.Collections.Generic;
 //
 public class OVRDeviceEditor : Editor
 {
-	// target component
-	private OVRDevice m_Component;
-
-	// OnEnable
-	void OnEnable()
-	{
-		m_Component = (OVRDevice)target;
-	}
-
-	// OnDestroy
-	void OnDestroy()
-	{
-	}
-	
 	// OnInspectorGUI
 	public override void OnInspectorGUI()
 	{
 		GUI.color = Color.white;
 		{
-			m_Component.PredictionTime     = EditorGUILayout.Slider("Prediction Time", 		 m_Component.PredictionTime,	0, 0.1f);
-			m_Component.ResetTrackerOnLoad = EditorGUILayout.Toggle("Reset Tracker On Load",  m_Component.ResetTrackerOnLoad);			
+			OVRDevice.PredictionTime     = EditorGUILayout.Slider("Prediction Time", 		OVRDevice.PredictionTime,	0, 0.1f);
+			OVRDevice.ResetTrackerOnLoad = EditorGUILayout.Toggle("Reset Tracker On Load",  OVRDevice.ResetTrackerOnLoad);			
 		}
 
 		if (GUI.changed)

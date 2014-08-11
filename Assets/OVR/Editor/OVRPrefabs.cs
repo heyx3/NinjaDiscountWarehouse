@@ -36,14 +36,12 @@ using UnityEditor;
 // into the scene.
 class OVRPrefabs
 {
-	[MenuItem ("Oculus/Prefabs/OVRCameraController")]	
 	static void CreateOVRCameraController ()
 	{
 		Object ovrcam = AssetDatabase.LoadAssetAtPath ("Assets/OVR/Prefabs/OVRCameraController.prefab", typeof(UnityEngine.Object));
 		PrefabUtility.InstantiatePrefab(ovrcam);
     }	
 	
-	[MenuItem ("Oculus/Prefabs/OVRPlayerController")]	
 	static void CreateOVRPlayerController ()
 	{
 		Object ovrcam = AssetDatabase.LoadAssetAtPath ("Assets/OVR/Prefabs/OVRPlayerController.prefab", typeof(UnityEngine.Object));

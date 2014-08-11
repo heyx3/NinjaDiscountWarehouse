@@ -65,18 +65,18 @@ public class OVRCameraControllerEditor : Editor
 #if CUSTOM_LAYOUT
 			OVREditorGUIUtility.Separator();			
 			
-			m_Component.VerticalFOV         = EditorGUILayout.FloatField("Vertical FOV", m_Component.VerticalFOV);
 			m_Component.IPD         		= EditorGUILayout.FloatField("IPD", m_Component.IPD);
-			
+			m_Component.CameraTextureScale  = EditorGUILayout.FloatField("Camera Texture Scale", m_Component.CameraTextureScale);
+			m_Component.ScaleRenderTarget   = EditorGUILayout.FloatField("Scale Render", m_Component.ScaleRenderTarget);
+
 			OVREditorGUIUtility.Separator();
 			
 			m_Component.CameraRootPosition  = EditorGUILayout.Vector3Field("Camera Root Position", m_Component.CameraRootPosition);
 			m_Component.NeckPosition 		= EditorGUILayout.Vector3Field("Neck Position", m_Component.NeckPosition);
-			m_Component.EyeCenterPosition 	= EditorGUILayout.Vector3Field("Eye Center Position", m_Component.EyeCenterPosition);
-			
+
 			OVREditorGUIUtility.Separator();
 
-			m_Component.UsePlayerEyeHeight  = EditorGUILayout.Toggle ("Use Player Eye Hght", m_Component.UsePlayerEyeHeight);
+			m_Component.UsePlayerEyeHeight  = EditorGUILayout.Toggle ("Use Player Eye Height", m_Component.UsePlayerEyeHeight);
 			
 			OVREditorGUIUtility.Separator();
 			
@@ -87,18 +87,12 @@ public class OVRCameraControllerEditor : Editor
 			
 			OVREditorGUIUtility.Separator();	
 
-			// Remove Portrait Mode from Inspector window for now
-			//m_Component.PortraitMode        = EditorGUILayout.Toggle ("Portrait Mode", m_Component.PortraitMode);
 			m_Component.EnableOrientation   = EditorGUILayout.Toggle ("Enable Orientation", m_Component.EnableOrientation);
+			m_Component.EnablePosition      = EditorGUILayout.Toggle ("Enable Position", m_Component.EnablePosition);
 			m_Component.PredictionOn        = EditorGUILayout.Toggle ("Prediction On", m_Component.PredictionOn);
-			m_Component.CallInPreRender     = EditorGUILayout.Toggle ("Call in Pre-Render", m_Component.CallInPreRender);
-			m_Component.WireMode     		= EditorGUILayout.Toggle ("Wire-Frame Mode", m_Component.WireMode);
-
-			OVREditorGUIUtility.Separator();
-			m_Component.LensCorrection     	= EditorGUILayout.Toggle ("Lens Correction", m_Component.LensCorrection);
-			m_Component.Chromatic     		= EditorGUILayout.Toggle ("Chromatic", m_Component.Chromatic);
-			m_Component.FlipCorrectionInY   = EditorGUILayout.Toggle ("FlipY", m_Component.FlipCorrectionInY);
-			m_Component.ShowDistortionWire  = EditorGUILayout.Toggle ("Show Wireframe", m_Component.ShowDistortionWire);
+			m_Component.TimeWarp     		= EditorGUILayout.Toggle ("Time Warp", m_Component.TimeWarp);
+			m_Component.FreezeTimeWarp     	= EditorGUILayout.Toggle ("Freeze Time Warp", m_Component.FreezeTimeWarp);
+			m_Component.Mirror  	   		= EditorGUILayout.Toggle ("Mirror to Display", m_Component.Mirror);
 
 			OVREditorGUIUtility.Separator();
 		

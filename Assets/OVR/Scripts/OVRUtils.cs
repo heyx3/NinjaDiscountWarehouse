@@ -25,6 +25,7 @@ limitations under the License.
 ************************************************************************************/
 using UnityEngine;
 using System.Collections.Generic;
+using OVR;
 
 
 //-------------------------------------------------------------------------------------
@@ -113,7 +114,33 @@ public class OVRUtils
 		
 		GL.End();
 	}
-	
+}
+
+public static class OVRExtensions
+{
+	public static Matrix4x4 ToMatrix4x4(this ovrMatrix4f ovrMat)
+	{
+        Matrix4x4 mat = new Matrix4x4();
+
+		mat[0, 0] = ovrMat.m[0, 0];
+		mat[0, 1] = ovrMat.m[0, 1];
+		mat[0, 2] = ovrMat.m[0, 2];
+		mat[0, 3] = ovrMat.m[0, 3];
+		mat[1, 0] = ovrMat.m[1, 0];
+		mat[1, 1] = ovrMat.m[1, 1];
+		mat[1, 2] = ovrMat.m[1, 2];
+		mat[1, 3] = ovrMat.m[1, 3];
+		mat[2, 0] = ovrMat.m[2, 0];
+		mat[2, 1] = ovrMat.m[2, 1];
+		mat[2, 2] = ovrMat.m[2, 2];
+		mat[2, 3] = ovrMat.m[2, 3];
+		mat[3, 0] = ovrMat.m[3, 0];
+		mat[3, 1] = ovrMat.m[3, 1];
+		mat[3, 2] = ovrMat.m[3, 2];
+		mat[3, 3] = ovrMat.m[3, 3];
+
+		return mat;
+	}
 }
 
 

@@ -31,6 +31,7 @@ using System.Collections;
 /// </summary>
 public class OVRGridCube : MonoBehaviour 
 {
+	public KeyCode GridKey                     = KeyCode.G;
 	private GameObject 	CubeGrid			   = null;
 	private OVRCameraGameObject CameraCubeGrid = null;
 
@@ -77,7 +78,7 @@ public class OVRGridCube : MonoBehaviour
 	void UpdateCubeGrid()
 	{
 		// Toggle the grid cube display on 'G'
-		if(Input.GetKeyDown(KeyCode.G))
+		if(Input.GetKeyDown(GridKey))
 		{
 			if(CubeGridOn == false)
 			{

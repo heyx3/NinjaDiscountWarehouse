@@ -40,15 +40,18 @@ public class OVRGamepadController : MonoBehaviour
 {	
 	//-------------------------
 	// Import from plugin
-	[DllImport ("OculusPlugin")]
+	
+	public const string strOvrLib = "OculusPlugin";
+
+	[DllImport (strOvrLib)]
 	private static extern bool OVR_GamepadController_Initialize();
-	[DllImport ("OculusPlugin")]
+	[DllImport (strOvrLib)]
 	private static extern bool OVR_GamepadController_Destroy();
-	[DllImport ("OculusPlugin")]
+	[DllImport (strOvrLib)]
 	private static extern bool OVR_GamepadController_Update();
-	[DllImport ("OculusPlugin")]
+	[DllImport (strOvrLib)]
 	private static extern float OVR_GamepadController_GetAxis(int axis);
-	[DllImport ("OculusPlugin")]
+	[DllImport (strOvrLib)]
 	private static extern bool OVR_GamepadController_GetButton(int button);
 	
 	//-------------------------
@@ -66,7 +69,9 @@ public class OVRGamepadController : MonoBehaviour
 	/// </summary>
 	/// <returns><c>true</c>, if c_ initialize was GPed, <c>false</c> otherwise.</returns>
 	public static bool GPC_Initialize()
-	{
+    {
+        if (!OVRDevice.SupportedPlatform)
+            return false;
 		return OVR_GamepadController_Initialize();
 	}
 	/// <summary>
@@ -75,6 +80,8 @@ public class OVRGamepadController : MonoBehaviour
 	/// <returns><c>true</c>, if c_ destroy was GPed, <c>false</c> otherwise.</returns>
 	public static bool GPC_Destroy()
 	{
+        if (!OVRDevice.SupportedPlatform)
+            return false;
 		return OVR_GamepadController_Destroy();
 	}
 	/// <summary>
@@ -82,7 +89,9 @@ public class OVRGamepadController : MonoBehaviour
 	/// </summary>
 	/// <returns><c>true</c>, if c_ update was GPed, <c>false</c> otherwise.</returns>
 	public static bool GPC_Update()
-	{
+    {
+        if (!OVRDevice.SupportedPlatform)
+            return false;
 		return OVR_GamepadController_Update();
 	}
 	/// <summary>
@@ -91,7 +100,9 @@ public class OVRGamepadController : MonoBehaviour
 	/// <returns>The c_ get axis.</returns>
 	/// <param name="axis">Axis.</param>
 	public static float GPC_GetAxis(int axis)
-	{
+    {
+        if (!OVRDevice.SupportedPlatform)
+            return 0.0f;
 		return OVR_GamepadController_GetAxis(axis);
 	}
 	/// <summary>
@@ -100,7 +111,9 @@ public class OVRGamepadController : MonoBehaviour
 	/// <returns><c>true</c>, if c_ get button was GPed, <c>false</c> otherwise.</returns>
 	/// <param name="button">Button.</param>
 	public static bool GPC_GetButton(int button)
-	{
+    {
+        if (!OVRDevice.SupportedPlatform)
+            return false;
 		return OVR_GamepadController_GetButton(button);
 	}
 	
@@ -134,36 +147,18 @@ public class OVRGamepadController : MonoBehaviour
 		GPC_GetButton((int)Button.LStick), GPC_GetButton((int)Button.RStick),
 		GPC_GetButton((int)Button.L1), GPC_GetButton((int)Button.R1)));
 	}
-	
-	// * * * * * * * * * * * * *
-	
-	/// <summary>
-	/// Awake this instance.
-	/// </summary>
-	void Awake () 
-	{	
-	}
-	
- 	/// <summary>
- 	/// Start this instance.
- 	/// </summary>
+
 	void Start()
     {
 		GPC_Available = GPC_Initialize();
     }
-	
-	/// <summary>
-	/// Update this instance.
-	/// </summary>
+
     void Update()
     {
 		GPC_Available = GPC_Update();
 		// GPC_Test();
     }
-	
-	/// <summary>
-	/// Raises the destroy event.
-	/// </summary>
+
 	void OnDestroy()
 	{
 		GPC_Destroy();

@@ -65,10 +65,11 @@ public class OVRPlayerControllerEditor : Editor
 			m_Component.BackAndSideDampen = EditorGUILayout.Slider("Back and Side Dampen", 	m_Component.BackAndSideDampen,0, 1);
 //			m_Component.JumpForce 		  = EditorGUILayout.Slider("Jump Force", 			m_Component.JumpForce, 		  0, 10);
 			m_Component.RotationAmount 	  = EditorGUILayout.Slider("Rotation Amount", 		m_Component.RotationAmount,   0, 5);
+			m_Component.RotationRatchet   = EditorGUILayout.Slider("Rotation Ratchet", 		m_Component.RotationRatchet,  0, 180);
 				
 			OVREditorGUIUtility.Separator();
 
-			m_Component.GravityModifier = EditorGUILayout.Slider("Gravity Modifier", m_Component.GravityModifier, 0, 1);
+			m_Component.GravityModifier = EditorGUILayout.Slider("Gravity Modifier", 		m_Component.GravityModifier, 0, 1);
 
 			OVREditorGUIUtility.Separator();
 		}

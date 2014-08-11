@@ -1,4 +1,4 @@
-﻿/************************************************************************************
+/************************************************************************************
 	
 Filename    :   OVRVisionGuide.cs
 Content     :   Guides user back to optimal vision volume 
@@ -70,10 +70,6 @@ public class OVRVisionGuide : MonoBehaviour
 			VisionGuide.SetActive(false);
 			// Set layer on object
 			VisionGuide.layer = LayerMask.NameToLayer(LayerName);
-			// Set initial location of offset to be the players center eye location
-			Vector3 eyeOffset = Vector3.zero;
-			CameraController.GetEyeCenterPosition(ref eyeOffset);
-			OVRCamera.SetCameraPositionOffset(ref eyeOffset);
 		}
 	}
 	
@@ -96,6 +92,12 @@ public class OVRVisionGuide : MonoBehaviour
 		UpdateResetOrientation();
 		// Fade screen out based on location of relative Vision Camera
 		UpdateFadeValueFromRelCamPosition(ref relVisionCam);
+				
+		if (Input.GetKeyDown(KeyCode.T))
+			CameraController.TimeWarp = !CameraController.TimeWarp;
+		
+		if (Input.GetKeyDown(KeyCode.F))
+			CameraController.FreezeTimeWarp = !CameraController.FreezeTimeWarp;
 	}
 
 	/// <summary>
@@ -106,14 +108,8 @@ public class OVRVisionGuide : MonoBehaviour
 		// Reset the view on 'R'
 		if (Input.GetKeyDown(KeyCode.R) == true)
 		{
-			// Reset tracker position. 
-			// We assume that the CameraController is at the desired neck location
-			Vector3 eyeOffset = Vector3.zero;
-			
-			if(CameraController != null)
-				CameraController.GetEyeCenterPosition(ref eyeOffset);
-			
-			OVRCamera.ResetCameraPositionOrientation(ref eyeOffset, true, false, false);
+			// Reset tracker position.
+			OVRCamera.ResetCameraPositionOrientation(Vector3.one, Vector3.zero, Vector3.up, Vector3.zero);
 		}
 	}
 
@@ -172,7 +168,7 @@ public class OVRVisionGuide : MonoBehaviour
 	/// <param name="curFade">Current fade.</param>
 	/// <param name="a">The alpha component.</param>
 	/// <param name="b">The blue component.</param>
-	 bool CalculateFadeValue(ref float curFade, float a, float b)
+	bool CalculateFadeValue(ref float curFade, float a, float b)
 	{
 		bool result = false;
 		

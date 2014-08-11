@@ -5,7 +5,7 @@ Content     :   Player controller interface.
 				This script drives OVR camera as well as controls the locomotion
 				of the player, and handles physical contact in the world.	
 Created     :   January 8, 2013
-Authors     :   Peter Giokaris
+Authors     :   Peter Giokaris, David Borel
 
 Copyright   :   Copyright 2014 Oculus VR, Inc. All Rights reserved.
 
@@ -31,11 +31,9 @@ using System.Collections.Generic;
 
 [RequireComponent(typeof(CharacterController))]
 
-//-------------------------------------------------------------------------------------
-// ***** OVRPlayerController
-//
 /// <summary>
-/// OVRPlayerController implements a basic first person controller for the Rift. It is 
+/// OVRPlayerController
+/// Implements a basic first person controller for the Rift. It is 
 /// attached to the OVRPlayerController prefab, which has an OVRCameraController attached
 /// to it. 
 /// 
@@ -47,18 +45,53 @@ using System.Collections.Generic;
 /// direction on. This game object should also house the body geometry which will be seen
 /// by the player.
 /// </summary>
-public class OVRPlayerController : OVRComponent
+public class OVRPlayerController : MonoBehaviour
 {
+	#region Public Variables
+	/// <summary>
+	/// How quickly the player's speed will increase.
+	/// </summary>
+	public float Acceleration 	   = 0.1f;
+
+	/// <summary>
+	/// How quickly the player's speed will dissipate.
+	/// </summary>
+	public float Damping 		   = 0.3f;
+
+	/// <summary>
+	/// How quickly the player's motion in the back and side directions will dissipate.
+	/// </summary>
+	public float BackAndSideDampen = 0.5f;
+
+	/// <summary>
+	/// The strength of the force used to make the player jump.
+	/// </summary>
+	public float JumpForce 		   = 0.3f;
+
+	/// <summary>
+	/// How quickly the player will rotate when the user drags the mouse.
+	/// </summary>
+	public float RotationAmount    = 1.5f;
+
+	/// <summary>
+	/// How much the player will rotate (in degrees) when the user turns with the D-Pad.
+	/// </summary>
+	public float RotationRatchet   = 45.0f;
+
+	/// <summary>
+	/// The strength of gravity, relative to Physics.gravity
+	/// </summary>
+	public float GravityModifier   = 0.379f;
+	#endregion
+
+	#region Static Members
+	static float sDeltaRotationOld = 0.0f;
+	#endregion
+		
+	#region Internal Variables
 	protected CharacterController 	Controller 		 = null;
 	protected OVRCameraController 	CameraController = null;
 
-	public float Acceleration 	   = 0.1f;
-	public float Damping 		   = 0.15f;
-	public float BackAndSideDampen = 0.5f;
-	public float JumpForce 		   = 0.3f;
-	public float RotationAmount    = 1.5f;
-	public float GravityModifier   = 0.379f;
-		
 	private float   MoveScale 	   = 1.0f;
 	private Vector3 MoveThrottle   = Vector3.zero;
 	private float   FallSpeed 	   = 0.0f;
@@ -76,19 +109,17 @@ public class OVRPlayerController : OVRComponent
 	// We can adjust these to influence speed and rotation of player controller
 	private float MoveScaleMultiplier     = 1.0f; 
 	private float RotationScaleMultiplier = 1.0f; 
-	private bool  AllowMouseRotation      = true;
+	private bool  SkipMouseRotation       = false;
 	private bool  HaltUpdateMovement      = false;
 
-	
-	// * * * * * * * * * * * * *
-	
-	/// <summary>
-	/// Awake this instance.
-	/// </summary>
-	new public virtual void Awake()
-	{
-		base.Awake();
-		
+	// For rachet rotation using d-pad
+	private bool prevHatLeft 			  = false;
+	private bool prevHatRight 			  = false;
+	#endregion
+
+	#region MonoBehaviour Message Handlers
+	void Awake()
+	{		
 		// We use Controller to move player around
 		Controller = gameObject.GetComponent<CharacterController>();
 		
@@ -126,42 +157,32 @@ public class OVRPlayerController : OVRComponent
 			Debug.LogWarning("OVRPlayerController: ForwardDirection game object not found. Do not use.");
 	}
 
-	/// <summary>
-	/// Start this instance.
-	/// </summary>
-	new public virtual void Start()
+	protected virtual void Start()
 	{
-		base.Start();
-		
 		InitializeInputs();	
 		SetCameras();
 	}
 		
-	/// <summary>
-	/// Update this instance.
-	/// </summary>
-	new public virtual void Update()
+	protected virtual void Update()
 	{
-		base.Update();
-
 		UpdateMovement();
 
 		Vector3 moveDirection = Vector3.zero;
 		
-		float motorDamp = (1.0f + (Damping * DeltaTime));
+		float motorDamp = (1.0f + (Damping * OVRDevice.SimulationRate * Time.deltaTime));
 		MoveThrottle.x /= motorDamp;
 		MoveThrottle.y = (MoveThrottle.y > 0.0f) ? (MoveThrottle.y / motorDamp) : MoveThrottle.y;
 		MoveThrottle.z /= motorDamp;
 
-		moveDirection += MoveThrottle * DeltaTime;
+		moveDirection += MoveThrottle * OVRDevice.SimulationRate * Time.deltaTime;
 		
 		// Gravity
 		if (Controller.isGrounded && FallSpeed <= 0)
 			FallSpeed = ((Physics.gravity.y * (GravityModifier * 0.002f)));	
 		else
-			FallSpeed += ((Physics.gravity.y * (GravityModifier * 0.002f)) * DeltaTime);	
+			FallSpeed += ((Physics.gravity.y * (GravityModifier * 0.002f)) * OVRDevice.SimulationRate * Time.deltaTime);	
 
-		moveDirection.y += FallSpeed * DeltaTime;
+		moveDirection.y += FallSpeed * OVRDevice.SimulationRate * Time.deltaTime;
 
 		// Offset correction for uneven ground
 		float bumpUpOffset = 0.0f;
@@ -182,17 +203,17 @@ public class OVRPlayerController : OVRComponent
 		Vector3 actualXZ = Vector3.Scale(Controller.transform.localPosition, new Vector3(1, 0, 1));
 		
 		if (predictedXZ != actualXZ)
-			MoveThrottle += (actualXZ - predictedXZ) / DeltaTime; 
+			MoveThrottle += (actualXZ - predictedXZ) / (OVRDevice.SimulationRate * Time.deltaTime);
 		
 		// Update rotation using CameraController transform, possibly proving some rules for 
 		// sliding the rotation for a more natural movement and body visual
 		UpdatePlayerForwardDirTransform();
 	}
-		
-	// UpdateMovement
-	static float sDeltaRotationOld = 0.0f;
+	#endregion
+
+	#region Public Functions
 	/// <summary>
-	/// Updates the movement.
+	/// Updates the player's movement.
 	/// </summary>
 	public virtual void UpdateMovement()
 	{
@@ -222,6 +243,20 @@ public class OVRPlayerController : OVRComponent
 		if (Input.GetKey(KeyCode.LeftArrow))  moveLeft 	  = true;
 		if (Input.GetKey(KeyCode.DownArrow))  moveBack 	  = true; 
 		if (Input.GetKey(KeyCode.RightArrow)) moveRight   = true; 
+
+		// D-Pad
+		bool dpad_move = false;
+		if(OVRGamepadController.GPC_GetButton((int)OVRGamepadController.Button.Up) == true)
+		{
+			moveForward = true;
+			dpad_move   = true;
+	
+		}	
+		if(OVRGamepadController.GPC_GetButton((int)OVRGamepadController.Button.Down) == true)
+		{
+			moveBack  = true; 
+			dpad_move = true;
+		}
 			
 		if ( (moveForward && moveLeft) || (moveForward && moveRight) ||
 			 (moveBack && moveLeft)    || (moveBack && moveRight) )
@@ -231,7 +266,7 @@ public class OVRPlayerController : OVRComponent
 		if (!Controller.isGrounded)	
 			MoveScale = 0.0f;
 			
-		MoveScale *= DeltaTime;
+		MoveScale *= OVRDevice.SimulationRate * Time.deltaTime;
 			
 		// Compute this for key movement
 		float moveInfluence = Acceleration * 0.1f * MoveScale * MoveScaleMultiplier;
@@ -239,29 +274,48 @@ public class OVRPlayerController : OVRComponent
 		// Run!
 		if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
 			moveInfluence *= 2.0f;
-			
+		else if (dpad_move)
+			moveInfluence *= 3.0f;
+
 		if(DirXform != null)
 		{
 			if (moveForward)
-				MoveThrottle += DirXform.TransformDirection(Vector3.forward * moveInfluence);
+				MoveThrottle += DirXform.TransformDirection(Vector3.forward * moveInfluence * transform.lossyScale.z);
 			if (moveBack)
-				MoveThrottle += DirXform.TransformDirection(Vector3.back * moveInfluence) * BackAndSideDampen;
+				MoveThrottle += DirXform.TransformDirection(Vector3.back * moveInfluence * transform.lossyScale.z) * BackAndSideDampen;
 			if (moveLeft)
-				MoveThrottle += DirXform.TransformDirection(Vector3.left * moveInfluence) * BackAndSideDampen;
+				MoveThrottle += DirXform.TransformDirection(Vector3.left * moveInfluence * transform.lossyScale.x) * BackAndSideDampen;
 			if (moveRight)
-				MoveThrottle += DirXform.TransformDirection(Vector3.right * moveInfluence) * BackAndSideDampen;
+				MoveThrottle += DirXform.TransformDirection(Vector3.right * moveInfluence * transform.lossyScale.x) * BackAndSideDampen;
 		}
 			
 		// Rotate
 			
-		// compute for key rotation
-		float rotateInfluence = DeltaTime * RotationAmount * RotationScaleMultiplier;
-			
-		//reduce by half to avoid getting ill
-		if (Input.GetKey(KeyCode.Q)) 
-			YRotation -= rotateInfluence * 0.5f;  
-		if (Input.GetKey(KeyCode.E)) 
-			YRotation += rotateInfluence * 0.5f; 
+		// D-Pad rachet
+
+		bool curHatLeft = false;
+		if(OVRGamepadController.GPC_GetButton((int)OVRGamepadController.Button.Left) == true)
+			curHatLeft = true;
+
+		if(curHatLeft && !prevHatLeft)
+			YRotation -= RotationRatchet; 
+
+		prevHatLeft = curHatLeft;
+
+		bool curHatRight = false;
+		if(OVRGamepadController.GPC_GetButton((int)OVRGamepadController.Button.Right) == true)
+			curHatRight = true;
+
+		if(curHatRight && !prevHatRight)
+			YRotation += RotationRatchet; 
+		
+		prevHatRight = curHatRight;
+
+		//Use keys to ratchet rotation
+		if (Input.GetKeyDown(KeyCode.Q)) 
+			YRotation -= RotationRatchet; 
+		if (Input.GetKeyDown(KeyCode.E)) 
+			YRotation += RotationRatchet;
 		
 		// * * * * * * * * * * *
 		// Mouse input
@@ -269,8 +323,12 @@ public class OVRPlayerController : OVRComponent
 		// Move
 			
 		// Rotate
+
+		// compute for key rotation
+		float rotateInfluence =  OVRDevice.SimulationRate * Time.deltaTime * RotationAmount * RotationScaleMultiplier;
+
 		float deltaRotation = 0.0f;
-		if(AllowMouseRotation == false)
+		if(SkipMouseRotation == false)
 			deltaRotation = Input.GetAxis("Mouse X") * rotateInfluence * 3.25f;
 			
 		float filteredDeltaRotation = (sDeltaRotationOld * 0.0f) + (deltaRotation * 1.0f);
@@ -281,7 +339,7 @@ public class OVRPlayerController : OVRComponent
 		// XBox controller input	
 			
 		// Compute this for xinput movement
-		moveInfluence = Acceleration * 0.1f * MoveScale * MoveScaleMultiplier;
+		moveInfluence = OVRDevice.SimulationRate * Time.deltaTime * Acceleration * 0.1f * MoveScale * MoveScaleMultiplier;
 			
 		// Run!
 		moveInfluence *= 1.0f + 
@@ -311,7 +369,6 @@ public class OVRPlayerController : OVRComponent
 			if(leftAxisX > 0.0f)
 				MoveThrottle += leftAxisX *
 				DirXform.TransformDirection(Vector3.right * moveInfluence) * BackAndSideDampen;
-
 		}
 			
 		float rightAxisX = 
@@ -320,9 +377,8 @@ public class OVRPlayerController : OVRComponent
 		// Rotate
 		YRotation += rightAxisX * rotateInfluence;    
 		
-	// Update cameras direction and rotation
-	SetCameras();
-
+		// Update cameras direction and rotation
+		SetCameras();
 	}
 
 	/// <summary>
@@ -340,12 +396,8 @@ public class OVRPlayerController : OVRComponent
 		}
 	}
 	
-	///////////////////////////////////////////////////////////
-	// PUBLIC FUNCTIONS
-	///////////////////////////////////////////////////////////
-	
 	/// <summary>
-	/// Jump this instance.
+	/// Jump! Must be enabled manually.
 	/// </summary>
 	public bool Jump()
 	{
@@ -429,18 +481,18 @@ public class OVRPlayerController : OVRComponent
 	/// <summary>
 	/// Gets the allow mouse rotation.
 	/// </summary>
-	/// <param name="allowMouseRotation">Allow mouse rotation.</param>
-	public void GetAllowMouseRotation(ref bool allowMouseRotation)
+	/// <param name="skipMouseRotation">Allow mouse rotation.</param>
+	public void GetSkipMouseRotation(ref bool skipMouseRotation)
 	{
-		allowMouseRotation = AllowMouseRotation;
+		skipMouseRotation = SkipMouseRotation;
 	}
 	/// <summary>
 	/// Sets the allow mouse rotation.
 	/// </summary>
-	/// <param name="allowMouseRotation">If set to <c>true</c> allow mouse rotation.</param>
-	public void SetAllowMouseRotation(bool allowMouseRotation)
+	/// <param name="skipMouseRotation">If set to <c>true</c> allow mouse rotation.</param>
+	public void SetSkipMouseRotation(bool skipMouseRotation)
 	{
-		AllowMouseRotation = allowMouseRotation;
+		SkipMouseRotation = skipMouseRotation;
 	}
 	
 	/// <summary>
@@ -459,6 +511,6 @@ public class OVRPlayerController : OVRComponent
 	{
 		HaltUpdateMovement = haltUpdateMovement;
 	}
-
+	#endregion
 }
 

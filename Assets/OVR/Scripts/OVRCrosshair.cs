@@ -44,6 +44,8 @@ public class OVRCrosshair
 	public float   FadeTime			  = 0.3f;
 	public float   FadeScale      	  = 0.6f;
 	public float   CrosshairDistance  = 1.0f;
+
+	public KeyCode CrosshairKey       = KeyCode.C;
 		
 	private float  DeadZoneX          =  400.0f;
 	private float  DeadZoneY          =   75.0f;
@@ -147,7 +149,7 @@ public class OVRCrosshair
 		
 		// Check to see if crosshair influences mouse rotation
 		if(PlayerController != null)
-			PlayerController.SetAllowMouseRotation(false);
+			PlayerController.SetSkipMouseRotation(false);
 		
 		if ((ImageCrosshair != null) && (FadeVal != 0.0f))
 		{
@@ -155,7 +157,7 @@ public class OVRCrosshair
 			// Other systems will check this to see if it is false for example 
 			// allowing rotation to take place
 			if(PlayerController != null)
-				PlayerController.SetAllowMouseRotation(true);
+				PlayerController.SetSkipMouseRotation(true);
 
 			GUI.color = new Color(1, 1, 1, FadeVal * FadeScale);
 			
@@ -164,14 +166,14 @@ public class OVRCrosshair
 			if(XL < DeadZoneX) 
 			{
 				if(PlayerController != null)
-					PlayerController.SetAllowMouseRotation(false);
+					PlayerController.SetSkipMouseRotation(false);
 				
 				XL = DeadZoneX - 0.001f;	
 			}
 			else if (XL > (Screen.width - DeadZoneX))
 			{
 				if(PlayerController != null)
-					PlayerController.SetAllowMouseRotation(false);
+					PlayerController.SetSkipMouseRotation(false);
 				
 				XL = ScreenWidth - DeadZoneX + 0.001f;
 			}
@@ -190,11 +192,11 @@ public class OVRCrosshair
 			}
 			
 			// Finally draw cursor
-			bool allowMouseRotation = true;
+			bool skipMouseRotation = true;
 			if(PlayerController != null)
-				PlayerController.GetAllowMouseRotation(ref allowMouseRotation);
+				PlayerController.GetSkipMouseRotation(ref skipMouseRotation);
 		
-			if(allowMouseRotation == true)
+			if(skipMouseRotation == true)
 			{
 				// Left
 				GUI.DrawTexture(new Rect(	XL - (ImageCrosshair.width * 0.5f),
@@ -216,7 +218,7 @@ public class OVRCrosshair
 	/// <returns><c>true</c>, if display crosshair was shoulded, <c>false</c> otherwise.</returns>
 	bool ShouldDisplayCrosshair()
 	{	
-		if(Input.GetKeyDown (KeyCode.C))
+		if(Input.GetKeyDown (CrosshairKey))
 		{
 			if(DisplayCrosshair == false)
 			{
