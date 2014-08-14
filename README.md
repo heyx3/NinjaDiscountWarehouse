@@ -1,4 +1,4 @@
-NinjaDiscountWarehouse
+Ninja Discount Warehouse
 ======================
 
 
